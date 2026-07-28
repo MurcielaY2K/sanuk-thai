@@ -8,6 +8,7 @@ import { initMonitoring } from '../lib/monitoring';
 import { useProgressStore } from '../store/progressStore';
 import { useSrsStore } from '../store/srsStore';
 import { useUserStore } from '../store/userStore';
+import { usePackStore } from '../store/packStore';
 import { supabase } from '../lib/supabase';
 import UpdateBanner from '../components/UpdateBanner';
 import { track } from '../lib/analytics';
@@ -20,7 +21,8 @@ export default function RootLayout() {
   const progressLoaded = useProgressStore(s => s.isLoaded);
   const srsLoading     = useSrsStore(s => s.isLoading);
   const userLoaded     = useUserStore(s => s.isLoaded);
-  const hydrated = progressLoaded && !srsLoading && userLoaded;
+  const packLoaded     = usePackStore(s => s.isLoaded);
+  const hydrated = progressLoaded && !srsLoading && userLoaded && packLoaded;
 
   useEffect(() => {
     initMonitoring();
@@ -28,6 +30,9 @@ export default function RootLayout() {
     useProgressStore.getState().load();
     useSrsStore.getState().load();
     useUserStore.getState().load();
+    // Must run before any screen renders: it consumes the ?unlock= param,
+    // which would otherwise be stripped by other navigation first.
+    usePackStore.getState().load();
   }, []);
 
   // Track Supabase auth changes. A magic-link sign-in lands with tokens in

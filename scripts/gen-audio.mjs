@@ -70,10 +70,19 @@ function extractReadingSentences() {
 const readingSentences = extractReadingSentences();
 const readingTokens = extract('data/reading.ts', /th:\s*'([^']+)'/g);
 
+// Private content packs (data/renovation.ts) — words, full sentences and the
+// per-word glosses. Generated too: the pack is used offline on site, where
+// the device TTS voice may not be available at all.
+const renoSrc = readFileSync(join(root, 'data/renovation.ts'), 'utf8');
+const renoWordBlock = renoSrc.match(/RENOVATION_WORDS: Word\[\] = \[([\s\S]*?)\n\];/)?.[1] ?? '';
+const renoWords = [...renoWordBlock.matchAll(/th:\s*'([^']+)'/g)].map(m => m[1]);
+const renoPhrases = extractSentences('data/renovation.ts');
+
 const texts = [...new Set([
   ...alphaNames, ...lessonWords,
   ...phrases.sentences, ...readingSentences,
   ...phrases.tokens, ...readingTokens,
+  ...renoWords, ...renoPhrases.sentences, ...renoPhrases.tokens,
   ...otherWords,
 ])];
 const LIMIT = Number(process.env.AUDIO_LIMIT ?? 5000); // top-priority subset

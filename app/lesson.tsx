@@ -4,9 +4,10 @@ import {
   Animated, Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getLessonById, getNextLesson, Lesson, WORLDS } from '../data/worlds';
+import { getLessonById, getNextLesson, Lesson, WORLDS, PRIVATE_WORLDS } from '../data/worlds';
 import { VOCABULARY, Word } from '../data/vocabulary';
 import { PHRASE_CATEGORIES } from '../data/phrases';
+import { RENOVATION_WORDS, renoPhrasesForWorld } from '../data/renovation';
 import { useProgressStore } from '../store/progressStore';
 import { Colors } from '../constants/colors';
 import { Fonts } from '../constants/typography';
@@ -17,6 +18,10 @@ import { SPRITES } from '../data/sprites';
 
 // Reference-only dictionary words never appear in lessons or as distractors.
 const POOL = VOCABULARY.filter(w => w.category !== 'dictionary');
+// Private-pack words live in their own pool: a public lesson must never show
+// a renovation word as a distractor, and vice versa — mixing them would both
+// leak unreleased content and make the wrong answers absurdly easy to spot.
+const RENO_POOL = RENOVATION_WORDS;
 
 // Pass requirements — a lesson only counts as complete when truly learnt.
 const PASS_LESSON = 0.7;
@@ -101,17 +106,25 @@ const WORLD_PHRASE_KEYS: Record<string, string[]> = {
 
 interface PhraseEntry { th: string; rom: string; en: string }
 
+const toPhraseEntries = (cats: { sentences: { tokens: { th: string; rom: string }[]; en: string }[] }[]) =>
+  cats.flatMap(c => c.sentences).map(s => ({
+    th: s.tokens.map(t => t.th).join(''),
+    rom: s.tokens.map(t => t.rom).join(' '),
+    en: s.en,
+  }));
+
 function phrasePool(worldId: string): { topic: PhraseEntry[]; all: PhraseEntry[] } {
+  // Private-pack worlds draw on their own phrasebook only.
+  if (PRIVATE_WORLDS.some(w => w.id === worldId)) {
+    const all = toPhraseEntries(renoPhrasesForWorld(''));
+    const topic = toPhraseEntries(renoPhrasesForWorld(worldId));
+    return { topic: topic.length >= 4 ? topic : all, all };
+  }
   const base = worldId.match(/^w\d+/)?.[0] ?? worldId;
   const keys = WORLD_PHRASE_KEYS[base] ?? [];
-  const toEntries = (catKeys: string[]) => PHRASE_CATEGORIES
-    .filter(c => catKeys.length === 0 || catKeys.includes(c.key))
-    .flatMap(c => c.sentences)
-    .map(s => ({
-      th: s.tokens.map(t => t.th).join(''),
-      rom: s.tokens.map(t => t.rom).join(' '),
-      en: s.en,
-    }));
+  const toEntries = (catKeys: string[]) => toPhraseEntries(
+    PHRASE_CATEGORIES.filter(c => catKeys.length === 0 || catKeys.includes(c.key)),
+  );
   const topic = toEntries(keys);
   return { topic: topic.length >= 4 ? topic : toEntries([]), all: toEntries([]) };
 }
@@ -142,10 +155,13 @@ function buildPhraseQuestions(worldId: string, tier: number, level: Level): Ques
 }
 
 function buildQuestions(lesson: Lesson, level: Level): Question[] {
-  const world = WORLDS.find(w => w.id === lesson.worldId);
+  const isPrivate = PRIVATE_WORLDS.some(w => w.id === lesson.worldId);
+  const world = (isPrivate ? PRIVATE_WORLDS : WORLDS).find(w => w.id === lesson.worldId);
   const tier = world?.tier ?? 1;
+  // Words and distractors both come from the lesson's own pool.
+  const pack = isPrivate ? RENO_POOL : POOL;
   const words = lesson.vocabIds
-    .map(id => POOL.find(w => w.id === id))
+    .map(id => pack.find(w => w.id === id))
     .filter(Boolean) as Word[];
 
   const target = lesson.type === 'checkpoint' ? TIER_CP_QUESTIONS[tier] : TIER_QUESTIONS[tier];
@@ -160,8 +176,8 @@ function buildQuestions(lesson: Lesson, level: Level): Question[] {
     const mode = modes[i % modes.length];
     const field: 'en' | 'th' = (mode === 'reverse' || mode === 'reading') ? 'th' : 'en';
 
-    let pool = hardDistractors ? POOL.filter(w => w.category === word.category && w.id !== word.id) : [];
-    if (pool.length < 3) pool = POOL.filter(w => w.id !== word.id);
+    let pool = hardDistractors ? pack.filter(w => w.category === word.category && w.id !== word.id) : [];
+    if (pool.length < 3) pool = pack.filter(w => w.id !== word.id);
     const seen = new Set([word[field]]);
     const distractors: string[] = [];
     for (const w of shuffle(pool)) {

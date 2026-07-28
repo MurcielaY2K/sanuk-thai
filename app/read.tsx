@@ -9,6 +9,8 @@ import PixelSprite from '../components/PixelSprite';
 import { SPRITES } from '../data/sprites';
 import { READING_LESSONS, type Sentence, type Token } from '../data/reading';
 import { PHRASE_CATEGORIES } from '../data/phrases';
+import { RENOVATION_PHRASES } from '../data/renovation';
+import { usePackStore } from '../store/packStore';
 
 function speak(text: string, rate = 0.75) {
   speakThai(text, rate);
@@ -25,6 +27,12 @@ type Selected = { s: number; t: number } | null;
 type Tab = 'stories' | string;
 
 export default function ReadScreen() {
+  const showReno = usePackStore(s => s.isVisible('renovation'));
+  // Private-pack phrasebooks appear as extra category tabs when unlocked.
+  const categories = useMemo(
+    () => (showReno ? [...PHRASE_CATEGORIES, ...RENOVATION_PHRASES] : PHRASE_CATEGORIES),
+    [showReno],
+  );
   const [tab, setTab] = useState<Tab>('stories');
   const [lessonIdx, setLessonIdx] = useState(0);
   const [showPhonemic, setShowPhonemic] = useState(true);
@@ -39,8 +47,8 @@ export default function ReadScreen() {
 
   const lesson = READING_LESSONS[lessonIdx];
   const category = useMemo(
-    () => PHRASE_CATEGORIES.find(c => c.key === tab) ?? null,
-    [tab]
+    () => categories.find(c => c.key === tab) ?? null,
+    [tab, categories]
   );
 
   const sentences: Sentence[] = tab === 'stories' ? lesson.sentences : (category?.sentences ?? []);
@@ -112,7 +120,7 @@ export default function ReadScreen() {
           contentContainerStyle={styles.tabs}
         >
           <Tab label="📜 Stories" active={tab === 'stories'} onPress={() => switchTab('stories')} />
-          {PHRASE_CATEGORIES.map(c => (
+          {categories.map(c => (
             <Tab
               key={c.key}
               label={`${c.icon} ${c.label}`}

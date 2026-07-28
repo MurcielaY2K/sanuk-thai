@@ -4,8 +4,9 @@ import {
   Dimensions, Animated, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import { WORLDS, ALL_LESSONS, Lesson, World } from '../../data/worlds';
+import { WORLDS, ALL_LESSONS, PRIVATE_WORLDS, PRIVATE_LESSONS, Lesson, World } from '../../data/worlds';
 import { useProgressStore, LessonState } from '../../store/progressStore';
+import { usePackStore } from '../../store/packStore';
 import { Colors } from '../../constants/colors';
 import { Fonts } from '../../constants/typography';
 import HeartsBar from '../HeartsBar';
@@ -42,10 +43,10 @@ interface HeaderItem {
 }
 type ListItem = NodeItem | HeaderItem;
 
-function buildList(): ListItem[] {
+function buildList(worlds: World[]): ListItem[] {
   const items: ListItem[] = [];
   let zigIdx = 0;
-  for (const world of WORLDS) {
+  for (const world of worlds) {
     items.push({ type: 'header', world });
     for (const lesson of world.lessons) {
       items.push({ type: 'lesson', lesson, world, zigIdx: zigIdx % ZIGZAG.length });
@@ -55,7 +56,10 @@ function buildList(): ListItem[] {
   return items;
 }
 
-const LIST_ITEMS = buildList();
+const LIST_ITEMS = buildList(WORLDS);
+// Private-pack path, appended after the public one only on devices that have
+// unlocked it (constants/privatePacks.ts).
+const PRIVATE_LIST_ITEMS = buildList(PRIVATE_WORLDS);
 
 function getEffectiveState(
   lesson: Lesson,
@@ -205,7 +209,9 @@ function WorldHeader({ world, done, stars }: { world: World; done: number; stars
 }
 
 export default function LearnTab() {
-  const { lessonProgress, lessonStars, isPremium, load, isLoaded, seedProgress, xp, level, dailyXp, dailyGoal } = useProgressStore();
+  const { lessonProgress, lessonStars, isPremium, load, isLoaded, seedProgress, openLesson, xp, level, dailyXp, dailyGoal } = useProgressStore();
+  const packLoaded = usePackStore(s => s.isLoaded);
+  const showReno = usePackStore(s => s.isVisible('renovation'));
   const [premiumVisible, setPremiumVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const didAutoScroll = useRef(false);
@@ -218,6 +224,12 @@ export default function LearnTab() {
   useEffect(() => {
     if (isLoaded) seedProgress(ALL_LESSONS[0].id);
   }, [isLoaded]);
+
+  // The private pack runs its own chain, so its first lesson has to be opened
+  // independently of the main path's seed.
+  useEffect(() => {
+    if (isLoaded && packLoaded && showReno) openLesson(PRIVATE_LESSONS[0].id);
+  }, [isLoaded, packLoaded, showReno]);
 
   // The "current" lesson is the next one to do: the first still-available
   // node. If nothing is available but some lessons are done, target the last
@@ -314,7 +326,7 @@ export default function LearnTab() {
             <XPBar />
           </View>
         </View>
-        {LIST_ITEMS.map((item, idx) => {
+        {(showReno ? [...LIST_ITEMS, ...PRIVATE_LIST_ITEMS] : LIST_ITEMS).map((item, idx) => {
           if (item.type === 'header') {
             const done = item.world.lessons.filter(l => lessonProgress[l.id] === 'complete').length;
             const starSum = item.world.lessons.reduce((acc, l) => acc + (lessonStars[l.id] ?? 0), 0);

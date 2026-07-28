@@ -18,4 +18,8 @@ export const StorageKeys = {
   // userStore
   profile:        '@thaiapp_user_profile',
   rewards:        '@thaiapp_unlocked_rewards',
+  // packStore — which private content packs this device has unlocked.
+  // Deliberately NOT part of the cloud progress snapshot: unlocking is a
+  // per-device switch, not progress to be synced.
+  unlockedPacks:  '@thaiapp_unlocked_packs',
 } as const;

@@ -128,6 +128,14 @@ Site URL = `https://murcielay2k.github.io/sanuk-thai`, and add
   the brand, not github.io. **Also verify this domain in Resend** (Step 3b)
   once purchased — it unblocks real user emails, not just hosting.
 
+## 🔒 Private packs (not part of the public launch)
+
+A **renovation pack** (217 words, 96 situational sentences, 4 worlds) ships
+locked and is visible only on devices that unlock it — see
+`docs/PRIVATE_PACKS.md`. It does not touch the public path, the public
+distractor pools, or the progression chain. Flip `PACK_PUBLIC.renovation` in
+`constants/privatePacks.ts` to launch it; get it native-reviewed first.
+
 ## Later / nice-to-have
 
 - Push-notification streak reminders (web push works on iOS home-screen apps

@@ -4,6 +4,8 @@ import {
   TouchableOpacity, SafeAreaView,
 } from 'react-native';
 import { VOCABULARY, Word } from '../../data/vocabulary';
+import { RENOVATION_WORDS, RENO_CATEGORIES } from '../../data/renovation';
+import { usePackStore } from '../../store/packStore';
 import { Colors } from '../../constants/colors';
 import { speakThai } from '../../lib/audio';
 import { Fonts } from '../../constants/typography';
@@ -11,6 +13,9 @@ import { Fonts } from '../../constants/typography';
 const CATEGORIES = ['all', 'greetings', 'numbers', 'time', 'food', 'places', 'colors', 'family', 'verbs', 'adjectives', 'personal', 'weather', 'feelings', 'jobs', 'transport', 'car', 'travel', 'home', 'kitchen', 'bedroom', 'bathroom', 'garden', 'housework', 'shopping', 'fruit', 'vegetables', 'seafood', 'meat', 'bakery', 'dairy', 'pharmacy', 'beauty', 'baby', 'stationery', 'store', 'clothing', 'tools', 'shops', 'breakfast', 'meals', 'dishes', 'desserts', 'eatingout', 'fastfood', 'tech', 'education', 'office', 'bank', 'post', 'leisure', 'sightseeing', 'nightlife', 'hotel', 'beach', 'music', 'photography', 'games', 'crafts', 'sport', 'fitness', 'health', 'body', 'animals', 'plants', 'nature', 'celebrations', 'dictionary'];
 
 const CAT_EMOJI: Record<string, string> = {
+  'reno-tools': '🔨', 'reno-materials': '🧱', 'reno-technique': '🛠️',
+  'reno-structure': '🏠', 'reno-trades': '👷', 'reno-measure': '📐',
+  'reno-problems': '⚠️', 'reno-money': '💸',
   all: '🔍', greetings: '🙏', numbers: '🔢', time: '⏰',
   food: '🍜', places: '📍', colors: '🎨', family: '👨‍👩‍👧',
   verbs: '🏃', adjectives: '⚖️', personal: '🪪', weather: '🌦️',
@@ -33,6 +38,9 @@ const CAT_EMOJI: Record<string, string> = {
 
 // Spirit Realm category colors
 const CAT_COLORS: Record<string, string> = {
+  'reno-tools': '#8a6f4e', 'reno-materials': '#a08464', 'reno-technique': '#7d6444',
+  'reno-structure': '#6b5438', 'reno-trades': '#9a7b52', 'reno-measure': '#87704f',
+  'reno-problems': '#b4553f', 'reno-money': '#7f6b3e',
   greetings:  Colors.teal,
   numbers:    Colors.lavender,
   time:       Colors.sky,
@@ -133,10 +141,20 @@ function WordRow({ word }: { word: Word }) {
 export default function DatabaseTab() {
   const [query, setQuery] = useState('');
   const [cat, setCat] = useState('all');
+  const showReno = usePackStore(s => s.isVisible('renovation'));
+
+  const words = useMemo(
+    () => (showReno ? [...VOCABULARY, ...RENOVATION_WORDS] : VOCABULARY),
+    [showReno],
+  );
+  const cats = useMemo(
+    () => (showReno ? [...CATEGORIES, ...RENO_CATEGORIES] : CATEGORIES),
+    [showReno],
+  );
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    return VOCABULARY.filter(w => {
+    return words.filter(w => {
       const matchCat = cat === 'all' || w.category === cat;
       if (!matchCat) return false;
       if (!q) return true;
@@ -146,7 +164,7 @@ export default function DatabaseTab() {
         w.en.toLowerCase().includes(q)
       );
     });
-  }, [query, cat]);
+  }, [query, cat, words]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -174,7 +192,7 @@ export default function DatabaseTab() {
       </View>
 
       <FlatList
-        data={CATEGORIES}
+        data={cats}
         horizontal
         showsHorizontalScrollIndicator={false}
         keyExtractor={c => c}

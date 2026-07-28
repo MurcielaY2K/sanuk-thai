@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs';
 
 const vocabSrc = readFileSync(new URL('../data/vocabulary.ts', import.meta.url), 'utf8');
+const renoSrc = readFileSync(new URL('../data/renovation.ts', import.meta.url), 'utf8');
 const tabSrc = readFileSync(new URL('../components/tabs/DatabaseTab.tsx', import.meta.url), 'utf8');
 
 // Match single- or double-quoted values allowing escaped quotes
@@ -15,15 +16,16 @@ const tabSrc = readFileSync(new URL('../components/tabs/DatabaseTab.tsx', import
 const FIELD = (name) =>
   new RegExp(`${name}:\\s*(?:'((?:[^'\\\\]|\\\\.)*)'|"((?:[^"\\\\]|\\\\.)*)")`, 'g');
 
-function extract(name) {
+function extractFrom(src, name) {
   const out = [];
-  for (const m of vocabSrc.matchAll(FIELD(name))) {
+  for (const m of src.matchAll(FIELD(name))) {
     const raw = m[1] ?? m[2];
     // Normalize escapes so 'Mother\'s Day' and "Mother's Day" collide as dups.
     out.push(raw.replace(/\\(.)/g, '$1'));
   }
   return out;
 }
+const extract = (name) => extractFrom(vocabSrc, name);
 
 const ids = extract('id');
 const ths = extract('th');
@@ -62,9 +64,36 @@ for (const cat of new Set(cats)) {
   if (!new RegExp(`(^|[\\s{])${cat}:`).test(colorBlock)) errors.push(`category '${cat}' missing from CAT_COLORS`);
 }
 
+// ── Private packs (data/renovation.ts) ──────────────────────────────────────
+// Same invariants, checked within the pack: the quiz builds distractors from
+// the pack's own pool, so a duplicate th/en there breaks a question just as
+// badly as it would in the public vocabulary.
+const renoWordBlock = renoSrc.match(/RENOVATION_WORDS: Word\[\] = \[([\s\S]*?)\n\];/)?.[1] ?? '';
+const renoIds = extractFrom(renoWordBlock, 'id');
+const renoThs = extractFrom(renoWordBlock, 'th');
+const renoEns = extractFrom(renoWordBlock, 'en');
+const renoCats = extractFrom(renoWordBlock, 'category');
+
+findDups(renoIds, 'renovation id');
+findDups(renoThs, 'renovation th');
+findDups(renoEns, 'renovation en');
+for (const th of renoThs) {
+  if (/[A-Za-z]/.test(th)) errors.push(`Latin letters in renovation th: '${th}'`);
+}
+for (const cat of new Set(renoCats)) {
+  if (!new RegExp(`'${cat}':`).test(emojiBlock)) errors.push(`category '${cat}' missing from CAT_EMOJI`);
+  if (!new RegExp(`'${cat}':`).test(colorBlock)) errors.push(`category '${cat}' missing from CAT_COLORS`);
+}
+// A public id colliding with a pack id would make getLessonById ambiguous.
+const publicIds = new Set(ids);
+for (const id of renoIds) {
+  if (publicIds.has(id)) errors.push(`renovation id '${id}' collides with a vocabulary id`);
+}
+
 if (errors.length) {
   console.error(`vocab validation FAILED (${errors.length} problem${errors.length > 1 ? 's' : ''}):`);
   for (const e of errors) console.error(`  - ${e}`);
   process.exit(1);
 }
 console.log(`vocab validation OK: ${ids.length} words, ${new Set(cats).size} categories`);
+console.log(`  + private packs: ${renoIds.length} renovation words, ${new Set(renoCats).size} categories`);

@@ -249,6 +249,7 @@ export const WORLDS: World[] = [
 // database order: 8-word lessons (max 8 + checkpoint per world).
 // ---------------------------------------------------------------------------
 import { VOCABULARY } from './vocabulary';
+import { RENOVATION_WORDS, RENO_WORLD_PLANS } from './renovation';
 
 interface GenWorldDef {
   id: string;
@@ -372,12 +373,64 @@ WORLDS.push(...buildGeneratedWorlds());
 // Flat list of all lessons in order
 export const ALL_LESSONS: Lesson[] = WORLDS.flatMap(w => w.lessons);
 
-export function getLessonById(id: string) { return ALL_LESSONS.find(l => l.id === id); }
+// ── Private packs ───────────────────────────────────────────────────────────
+// Private-pack worlds are built the same way but kept in a SEPARATE array.
+// Keeping them out of WORLDS/ALL_LESSONS means the public progression chain
+// is untouched: finishing the last public lesson can never spill a learner
+// into private content, whether or not the pack is unlocked.
+
+const RENO_LESSON_SIZE = 8;
+
+function buildRenoWorlds(): World[] {
+  const [realmTint, color, darkColor] = ['#c9b8a0', '#8a6f4e', '#6b5438'];
+  return RENO_WORLD_PLANS.map(plan => {
+    const words = RENOVATION_WORDS.filter(w => plan.categories.includes(w.category));
+    const lessons: Lesson[] = [];
+    for (let i = 0; i * RENO_LESSON_SIZE < words.length; i++) {
+      const slice = words.slice(i * RENO_LESSON_SIZE, (i + 1) * RENO_LESSON_SIZE);
+      if (slice.length < 4) break; // a stub lesson isn't worth a node
+      const [title, icon] = plan.lessonTitles[i % plan.lessonTitles.length];
+      lessons.push({
+        id: `${plan.id}-l${i + 1}`, worldId: plan.id,
+        title, icon, xpReward: plan.tier === 3 ? 25 : 20, type: 'vocab',
+        vocabIds: slice.map(w => w.id),
+      });
+    }
+    const taught = lessons.flatMap(l => l.vocabIds);
+    const cpSize = Math.min(12, taught.length);
+    const step = Math.max(1, Math.floor(taught.length / cpSize));
+    lessons.push({
+      id: `${plan.id}-cp`, worldId: plan.id,
+      title: 'Checkpoint', icon: '⭐', xpReward: plan.tier === 3 ? 75 : 60,
+      type: 'checkpoint',
+      vocabIds: [...new Set(Array.from({ length: cpSize }, (_, i) => taught[(i * step) % taught.length]))],
+    });
+    return {
+      id: plan.id, title: plan.title, subtitle: plan.subtitle,
+      color, darkColor, realmTint, emoji: plan.emoji,
+      isPremium: false, tier: plan.tier, lessons,
+    };
+  });
+}
+
+export const PRIVATE_WORLDS: World[] = buildRenoWorlds();
+export const PRIVATE_LESSONS: Lesson[] = PRIVATE_WORLDS.flatMap(w => w.lessons);
+
+const PRIVATE_LESSON_IDS = new Set(PRIVATE_LESSONS.map(l => l.id));
+export function isPrivateLesson(id: string): boolean { return PRIVATE_LESSON_IDS.has(id); }
+
+export function getLessonById(id: string) {
+  return ALL_LESSONS.find(l => l.id === id) ?? PRIVATE_LESSONS.find(l => l.id === id);
+}
 
 export function getNextLesson(lessonId: string): { lesson: Lesson | null; isPremium: boolean } {
-  const idx = ALL_LESSONS.findIndex(l => l.id === lessonId);
-  if (idx < 0 || idx >= ALL_LESSONS.length - 1) return { lesson: null, isPremium: false };
-  const next = ALL_LESSONS[idx + 1];
-  const world = WORLDS.find(w => w.id === next.worldId)!;
+  // Private packs advance within their own chain, never into or out of the
+  // public path.
+  const chain = isPrivateLesson(lessonId) ? PRIVATE_LESSONS : ALL_LESSONS;
+  const worlds = isPrivateLesson(lessonId) ? PRIVATE_WORLDS : WORLDS;
+  const idx = chain.findIndex(l => l.id === lessonId);
+  if (idx < 0 || idx >= chain.length - 1) return { lesson: null, isPremium: false };
+  const next = chain[idx + 1];
+  const world = worlds.find(w => w.id === next.worldId)!;
   return { lesson: next, isPremium: world.isPremium };
 }

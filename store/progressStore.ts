@@ -52,6 +52,7 @@ interface ProgressStore {
   applyPremium: (active: boolean) => void;
   refreshEntitlement: () => Promise<void>;
   seedProgress: (firstLessonId: string) => void;
+  openLesson: (lessonId: string) => void;
 }
 
 function computeLevel(xp: number) { return Math.floor(xp / 100) + 1; }
@@ -142,6 +143,17 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     const { lessonProgress } = get();
     if (Object.keys(lessonProgress).length > 0) return; // already seeded
     const next = { ...lessonProgress, [firstLessonId]: 'available' as LessonState };
+    set({ lessonProgress: next });
+    AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
+  },
+
+  // Open a single lesson that has no state yet, without touching anything
+  // already recorded. Used to start a private pack's own chain, which is
+  // independent of the main path's seed.
+  openLesson: (lessonId: string) => {
+    const { lessonProgress } = get();
+    if (lessonProgress[lessonId]) return;
+    const next = { ...lessonProgress, [lessonId]: 'available' as LessonState };
     set({ lessonProgress: next });
     AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
   },
