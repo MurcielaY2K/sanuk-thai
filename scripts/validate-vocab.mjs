@@ -41,8 +41,18 @@ function findDups(list, label) {
 }
 
 findDups(ids, 'id');
-findDups(ths, 'th');
 findDups(ens, 'en');
+
+// Duplicate Thai is only a defect for words the quiz can actually use: two
+// identical prompts with different right answers make an unanswerable
+// question. 'dictionary' is reference-only — app/lesson.tsx filters it out of
+// the question and distractor pool — so a dictionary entry may legitimately
+// share Thai with a lesson word (buy/purchase) or with another dictionary
+// entry (construct/create), the way any English→Thai dictionary does.
+// The invariant that actually matters: at most ONE quiz-eligible word per
+// Thai string.
+const quizThs = ths.filter((_, i) => cats[i] !== 'dictionary');
+findDups(quizThs, 'th (quiz-eligible)');
 
 if (!(ids.length === ths.length && ths.length === ens.length && ens.length === cats.length)) {
   errors.push(`field count mismatch: id=${ids.length} th=${ths.length} en=${ens.length} category=${cats.length}`);
