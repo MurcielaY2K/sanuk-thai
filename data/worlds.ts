@@ -419,6 +419,11 @@ export const PRIVATE_LESSONS: Lesson[] = PRIVATE_WORLDS.flatMap(w => w.lessons);
 const PRIVATE_LESSON_IDS = new Set(PRIVATE_LESSONS.map(l => l.id));
 export function isPrivateLesson(id: string): boolean { return PRIVATE_LESSON_IDS.has(id); }
 
+const PREMIUM_LESSON_IDS = new Set(
+  WORLDS.filter(w => w.isPremium).flatMap(w => w.lessons.map(l => l.id)),
+);
+export function isPremiumLesson(id: string): boolean { return PREMIUM_LESSON_IDS.has(id); }
+
 export function getLessonById(id: string) {
   return ALL_LESSONS.find(l => l.id === id) ?? PRIVATE_LESSONS.find(l => l.id === id);
 }

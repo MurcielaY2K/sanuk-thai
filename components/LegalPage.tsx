@@ -21,7 +21,7 @@ export default function LegalPage({ title, updated, sections }: Props) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.backBtn}
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
         >

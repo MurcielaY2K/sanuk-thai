@@ -76,7 +76,9 @@ export default function PremiumModal({ visible, onClose }: Props) {
               {tiers.map(t => {
                 const active = t.id === tierId;
                 return (
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="radio"
+                    accessibilityLabel={`${t.label}, ${t.price} ${t.per}${t.note ? `, ${t.note}` : ''}`}
+                    accessibilityState={{ checked: active }}
                     key={t.id}
                     style={[styles.tier, active && styles.tierActive]}
                     onPress={() => setTierId(t.id)}
@@ -116,7 +118,7 @@ export default function PremiumModal({ visible, onClose }: Props) {
 
           {STRIPE_CHECKOUT_ENABLED ? (
             <>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.stripeBtn}
                 onPress={() => tier && openStripe(tier)}
                 activeOpacity={0.88}
@@ -160,7 +162,7 @@ export default function PremiumModal({ visible, onClose }: Props) {
             </>
           )}
 
-          <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={styles.dismissWrap}>
+          <TouchableOpacity accessibilityRole="button" onPress={onClose} activeOpacity={0.7} style={styles.dismissWrap}>
             <Text style={styles.dismiss}>Maybe later</Text>
           </TouchableOpacity>
         </Pressable>

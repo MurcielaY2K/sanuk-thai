@@ -120,7 +120,7 @@ function speak(text: string) {
 function WordRow({ word }: { word: Word }) {
   const color = catColor(word.category);
   return (
-    <TouchableOpacity style={styles.row} onPress={() => speak(word.th)} activeOpacity={0.7}>
+    <TouchableOpacity accessibilityRole="button" style={styles.row} onPress={() => speak(word.th)} activeOpacity={0.7}>
       <View style={styles.rowLeft}>
         <Text style={styles.thai}>{word.th}</Text>
         <Text style={styles.rom}>{word.rom}</Text>
@@ -185,7 +185,7 @@ export default function DatabaseTab() {
           autoCorrect={false}
         />
         {query.length > 0 && (
-          <TouchableOpacity onPress={() => setQuery('')}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQuery('')}>
             <Text style={styles.clear}>✕</Text>
           </TouchableOpacity>
         )}
@@ -201,7 +201,7 @@ export default function DatabaseTab() {
           const isActive = cat === c;
           const color = catColor(c);
           return (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               style={[
                 styles.catChip,
                 isActive && { backgroundColor: color + '20', borderColor: color },

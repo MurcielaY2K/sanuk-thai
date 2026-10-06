@@ -13,7 +13,33 @@ export type AnalyticsEvent =
   | 'paywall_view' | 'checkout_click';
 
 const DEVICE_KEY = '@thaiapp_device_id';
+// Opt-out switch (Profile → "Share anonymous usage data"). Default on; stored
+// per device. Legal basis is legitimate interest, which requires a working
+// right to object — this is it.
+const OPT_OUT_KEY = '@thaiapp_analytics_opt_out';
 let deviceId: string | null = null;
+let optedOut: boolean | null = null;
+
+async function isOptedOut(): Promise<boolean> {
+  if (optedOut === null) optedOut = (await AsyncStorage.getItem(OPT_OUT_KEY)) === 'true';
+  return optedOut;
+}
+
+export async function getAnalyticsEnabled(): Promise<boolean> {
+  return !(await isOptedOut());
+}
+
+export async function setAnalyticsEnabled(enabled: boolean): Promise<void> {
+  optedOut = !enabled;
+  await AsyncStorage.setItem(OPT_OUT_KEY, enabled ? 'false' : 'true');
+  if (!enabled) {
+    // Drop anything queued and forget the id, so turning it back on later
+    // starts a fresh, unlinked identifier.
+    queue = [];
+    deviceId = null;
+    await AsyncStorage.removeItem(DEVICE_KEY);
+  }
+}
 let queue: { device_id: string; event: string; props: Record<string, unknown> }[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -43,8 +69,10 @@ async function flush() {
 
 export function track(event: AnalyticsEvent, props: Record<string, unknown> = {}): void {
   if (!SUPABASE_CONFIGURED) return;
-  getDeviceId()
+  isOptedOut()
+    .then(out => (out ? null : getDeviceId()))
     .then(id => {
+      if (!id) return;
       queue.push({ device_id: id, event, props });
       if (!flushTimer) flushTimer = setTimeout(flush, 4000);
     })

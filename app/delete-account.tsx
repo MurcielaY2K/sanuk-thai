@@ -34,7 +34,7 @@ export default function DeleteAccount() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.backBtn}
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
         >
@@ -49,7 +49,7 @@ export default function DeleteAccount() {
             <Text style={styles.para}>
               ✅ Done. Your account and data have been deleted. Thanks for learning Thai with us — สวัสดีครับ 👋
             </Text>
-            <TouchableOpacity style={styles.homeBtn} onPress={() => router.replace('/')}>
+            <TouchableOpacity accessibilityRole="button" style={styles.homeBtn} onPress={() => router.replace('/')}>
               <Text style={styles.homeBtnText}>Back to start</Text>
             </TouchableOpacity>
           </>
@@ -81,17 +81,17 @@ export default function DeleteAccount() {
                     <Text style={styles.confirmText}>
                       Really delete{username ? ` @${username}` : ''} and all data? This is permanent.
                     </Text>
-                    <TouchableOpacity style={styles.dangerBtn} onPress={runDelete} disabled={busy}>
+                    <TouchableOpacity accessibilityRole="button" style={styles.dangerBtn} onPress={runDelete} disabled={busy}>
                       {busy
                         ? <ActivityIndicator color="#fff" size="small" />
                         : <Text style={styles.dangerBtnText}>Yes, delete everything</Text>}
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.cancelBtn} onPress={() => setConfirming(false)} disabled={busy}>
+                    <TouchableOpacity accessibilityRole="button" style={styles.cancelBtn} onPress={() => setConfirming(false)} disabled={busy}>
                       <Text style={styles.cancelBtnText}>Keep my account</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
-                  <TouchableOpacity style={styles.dangerBtn} onPress={() => setConfirming(true)}>
+                  <TouchableOpacity accessibilityRole="button" style={styles.dangerBtn} onPress={() => setConfirming(true)}>
                     <Text style={styles.dangerBtnText}>Delete my account & data</Text>
                   </TouchableOpacity>
                 )}

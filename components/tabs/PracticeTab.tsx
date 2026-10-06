@@ -72,7 +72,7 @@ function PracticeCard({
   badge?: string; onPress: () => void; disabled?: boolean;
 }) {
   return (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       style={[
         styles.card,
         { borderLeftColor: color, backgroundColor: color + '10' },

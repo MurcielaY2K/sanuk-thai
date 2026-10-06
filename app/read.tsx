@@ -105,7 +105,7 @@ export default function ReadScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Top bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.close} onPress={() => router.replace('/')}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close" style={styles.close} onPress={() => router.replace('/')}>
           <Text style={styles.closeText}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.screenTitle}>Read</Text>
@@ -139,14 +139,14 @@ export default function ReadScreen() {
           <>
             {/* Lesson nav */}
             <View style={styles.lessonNav}>
-              <TouchableOpacity style={styles.navArrow} onPress={() => goLesson(lessonIdx - 1)}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Previous story" style={styles.navArrow} onPress={() => goLesson(lessonIdx - 1)}>
                 <Text style={styles.navArrowText}>‹</Text>
               </TouchableOpacity>
               <View style={styles.lessonTitleWrap}>
                 <Text style={styles.title}>{lesson.title}</Text>
                 <Text style={styles.titleEn}>{lesson.titleEn} · {lessonIdx + 1}/{READING_LESSONS.length}</Text>
               </View>
-              <TouchableOpacity style={styles.navArrow} onPress={() => goLesson(lessonIdx + 1)}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Next story" style={styles.navArrow} onPress={() => goLesson(lessonIdx + 1)}>
                 <Text style={styles.navArrowText}>›</Text>
               </TouchableOpacity>
             </View>
@@ -187,7 +187,7 @@ export default function ReadScreen() {
         <View style={styles.toggles}>
           <Toggle label="Phonetic" on={showPhonemic} onPress={() => setShowPhonemic(v => !v)} />
           <Toggle label="Translate" on={showTranslate} onPress={() => setShowTranslate(v => !v)} />
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.speedBtn}
             onPress={() => setSpeedIdx(i => (i + 1) % SPEEDS.length)}
             activeOpacity={0.8}
@@ -249,7 +249,7 @@ function SentenceRow({
           {sentence.tokens.map((token, t) => {
             const isSel = selected?.s === sIndex && selected?.t === t;
             return (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 key={t}
                 style={[styles.word, isSel && styles.wordSelected]}
                 onPress={() => onTapWord(sIndex, t, token)}
@@ -263,7 +263,7 @@ function SentenceRow({
             );
           })}
         </View>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={isPlaying ? 'Stop sentence' : 'Play sentence'}
           style={[styles.speakBtn, isPlaying && styles.speakBtnPlaying]}
           onPress={onSpeak}
           activeOpacity={0.7}
@@ -278,7 +278,7 @@ function SentenceRow({
 
 function Tab({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       style={[styles.tab, active && styles.tabActive]}
       onPress={onPress}
       activeOpacity={0.8}
@@ -290,7 +290,7 @@ function Tab({ label, active, onPress }: { label: string; active: boolean; onPre
 
 function Toggle({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
   return (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       style={[styles.toggle, on && styles.toggleOn]}
       onPress={onPress}
       activeOpacity={0.8}

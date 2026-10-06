@@ -21,6 +21,24 @@ const HEART_REFILL_MS = 30 * 60 * 1000; // 30 min per heart
 const MAX_HEARTS = 5;
 
 export type LessonState = 'available' | 'locked' | 'complete' | 'premium-locked';
+
+// The Premium unlock is derived at READ time, never written into storage.
+// Stored progress records what the user has reached; whether a premium lesson
+// is playable depends on the entitlement *now*. Persisting the unlock (as an
+// earlier version did) meant flipping PREMIUM_ON_HOLD off — or a subscription
+// lapsing — could never re-lock lessons already reached.
+// A completed lesson stays replayable either way.
+export function effectiveLessonState(
+  stored: LessonState | undefined,
+  lessonIsPremium: boolean,
+  isPremium: boolean,
+): LessonState | undefined {
+  if (lessonIsPremium && !isPremium && stored !== 'complete') {
+    return stored ? 'premium-locked' : undefined;
+  }
+  if (stored === 'premium-locked' && isPremium) return 'available';
+  return stored;
+}
 // Self-reported skill chosen at onboarding; drives lesson adaptivity.
 export type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
 
@@ -120,15 +138,8 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
       const { hearts, lastRefill } = refillHearts(storedHearts, storedRefill);
       const gems = gJ !== null && Number.isFinite(Number(gJ)) ? Math.max(0, Number(gJ)) : 30;
       const isPremium = PREMIUM_ON_HOLD || premJ === 'true';
+      // Hydrated verbatim — see effectiveLessonState() for the premium unlock.
       const lessonProgress: Record<string, LessonState> = progJ ? JSON.parse(progJ) : {};
-      // While the Premium hold is active, open premium-locked lessons in
-      // memory only — stored state is untouched so flipping the flag back
-      // restores the paywall.
-      if (PREMIUM_ON_HOLD) {
-        for (const [id, state] of Object.entries(lessonProgress)) {
-          if (state === 'premium-locked') lessonProgress[id] = 'available';
-        }
-      }
       let daily: DailyXP = dailyJ ? JSON.parse(dailyJ) : { date: todayStr(), earned: 0 };
       if (daily.date !== todayStr()) daily = { date: todayStr(), earned: 0 };
       set({ xp, level: computeLevel(xp), hearts, lastHeartRefill: lastRefill, gems, isPremium, lessonProgress, lessonStars, skillLevel, dailyXp: daily, isLoaded: true });
@@ -197,10 +208,12 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
   },
 
   completeLesson: (lessonId: string, nextLessonId?: string, nextIsPremium?: boolean) => {
-    const { lessonProgress, isPremium } = get();
+    const { lessonProgress } = get();
     const next = { ...lessonProgress, [lessonId]: 'complete' as LessonState };
-    if (nextLessonId) {
-      next[nextLessonId] = (nextIsPremium && !isPremium) ? 'premium-locked' : 'available';
+    // Record the lesson's intrinsic state, not the user's current entitlement:
+    // effectiveLessonState() decides playability at read time.
+    if (nextLessonId && lessonProgress[nextLessonId] !== 'complete') {
+      next[nextLessonId] = nextIsPremium ? 'premium-locked' : 'available';
     }
     set({ lessonProgress: next });
     AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
@@ -220,21 +233,13 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
   },
 
   applyPremium: (active: boolean) => {
-    const { lessonProgress } = get();
-    const next = { ...lessonProgress };
-    if (active) {
-      // Unlock all premium-locked lessons
-      for (const [id, state] of Object.entries(next)) {
-        if (state === 'premium-locked') next[id] = 'available';
-      }
-    }
+    // Only the entitlement flag changes; lesson unlocks follow from it via
+    // effectiveLessonState(), so a lapsed subscription re-locks correctly.
     set({
       isPremium: PREMIUM_ON_HOLD || active,
-      lessonProgress: next,
       ...(active ? { hearts: MAX_HEARTS } : {}),
     });
     AsyncStorage.setItem(PREMIUM_KEY, active ? 'true' : 'false');
-    if (active) AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
   },
 
   refreshEntitlement: async () => {

@@ -38,7 +38,9 @@ export default function BottomTabBar({ active, onPress }: Props) {
         const labelColor = isActive ? tab.glowColor : Colors.textMuted;
 
         return (
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="tab"
+            accessibilityLabel={tab.label}
+            accessibilityState={{ selected: isActive }}
             key={tab.id}
             style={styles.tab}
             onPress={() => onPress(tab.id)}

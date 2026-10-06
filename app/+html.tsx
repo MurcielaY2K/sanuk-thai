@@ -74,27 +74,66 @@ export default function Root({ children }: PropsWithChildren) {
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // On-device error reporter: if the app's JS crashes on load, show
-              // the real error in a red banner so it can be screenshotted.
+              // Error reporting on the device.
+              //  * Debug mode — open the app once with ?debug=1 (persists; ?debug=0
+              //    turns it off): every error/rejection is shown raw in a red
+              //    banner so it can be screenshotted.
+              //  * Everyone else: nothing is ever shown for a stray error or a
+              //    failed request (offline, etc.). Only if the app genuinely fails
+              //    to start — an error while #root is still empty — do they get a
+              //    plain "please reload" message instead of a blank screen.
               (function () {
-                function banner(msg) {
+                var DEBUG_KEY = '@thaiapp_debug';
+                var debug = false;
+                try {
+                  var q = new URLSearchParams(location.search).get('debug');
+                  if (q === '1') localStorage.setItem(DEBUG_KEY, '1');
+                  if (q === '0') localStorage.removeItem(DEBUG_KEY);
+                  debug = localStorage.getItem(DEBUG_KEY) === '1';
+                } catch (e) {}
+
+                function el(id, css) {
+                  var d = document.getElementById(id);
+                  if (!d) {
+                    d = document.createElement('div');
+                    d.id = id;
+                    d.style.cssText = css;
+                    document.body ? document.body.appendChild(d) : document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(d); });
+                  }
+                  return d;
+                }
+                function raw(msg) {
+                  if (!debug) return;
                   try {
-                    var d = document.getElementById('err-banner');
-                    if (!d) {
-                      d = document.createElement('div');
-                      d.id = 'err-banner';
-                      d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;font:12px/1.5 monospace;padding:8px 12px;white-space:pre-wrap;word-break:break-all;max-height:45vh;overflow:auto';
-                      document.body ? document.body.appendChild(d) : document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(d); });
-                    }
-                    d.textContent += msg + '\\n';
+                    el('err-banner', 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;font:12px/1.5 monospace;padding:8px 12px;white-space:pre-wrap;word-break:break-all;max-height:45vh;overflow:auto')
+                      .textContent += msg + '\\n';
+                  } catch (e) {}
+                }
+                function appStarted() {
+                  var r = document.getElementById('root');
+                  return !!(r && r.children.length);
+                }
+                function startupFailed() {
+                  if (debug || appStarted()) return;
+                  try {
+                    var d = el('load-fail', 'position:fixed;inset:0;z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;background:#f0eee7;color:#17150f;font:16px/1.5 system-ui,sans-serif;text-align:center');
+                    d.textContent = '';
+                    var p = document.createElement('div');
+                    p.textContent = "Sanuk Thai couldn't start. Please check your connection and reload.";
+                    var b = document.createElement('button');
+                    b.textContent = 'Reload';
+                    b.style.cssText = 'font:inherit;padding:10px 22px;border-radius:10px;border:2px solid #17150f;background:#ff5a1f;color:#17150f;cursor:pointer';
+                    b.onclick = function () { location.reload(); };
+                    d.appendChild(p); d.appendChild(b);
                   } catch (e) {}
                 }
                 window.addEventListener('error', function (e) {
-                  banner('[error] ' + (e.message || '') + ' @ ' + (e.filename || '').split('/').pop() + ':' + e.lineno);
+                  raw('[error] ' + (e.message || '') + ' @ ' + (e.filename || '').split('/').pop() + ':' + e.lineno);
+                  startupFailed();
                 });
                 window.addEventListener('unhandledrejection', function (e) {
                   var r = e.reason || {};
-                  banner('[promise] ' + (r.message || String(r)).slice(0, 300));
+                  raw('[promise] ' + (r.message || String(r)).slice(0, 300));
                 });
               })();
               (function () {

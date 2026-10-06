@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useSrsStore } from '../store/srsStore';
 import { useProgressStore } from '../store/progressStore';
 import { useUserStore } from '../store/userStore';
@@ -28,6 +28,7 @@ function consumeStripeSuccess(): boolean {
 
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState<TabId>('learn');
+  const [paymentStuck, setPaymentStuck] = useState(false);
   // Stores are hydrated once by the root layout (app/_layout.tsx) before any
   // route renders; this screen only consumes them.
   const { getStats, streak } = useSrsStore();
@@ -59,6 +60,12 @@ export default function HomeScreen() {
       for (const ms of [3000, 8000, 15000, 30000]) {
         setTimeout(() => { useProgressStore.getState().refreshEntitlement(); }, ms);
       }
+      // If the webhook still hasn't granted Premium after the backoff, the
+      // payment was likely parked as unlinked (supabase/entitlements.sql) —
+      // tell the buyer how to get it activated instead of leaving them stuck.
+      setTimeout(() => {
+        if (!useProgressStore.getState().isPremium) setPaymentStuck(true);
+      }, 40000);
     }
   }, [progressLoaded]);
 
@@ -94,6 +101,22 @@ export default function HomeScreen() {
         {activeTab === 'ranking'  && <LeaderboardTab />}
         {activeTab === 'profile'  && <ProfileTab />}
       </View>
+      {paymentStuck && (
+        <View style={styles.payBanner} accessibilityRole="alert">
+          <Text style={styles.payBannerText}>
+            Thanks for your purchase! Premium hasn't activated yet. If it's not on within a few
+            minutes, email coficollective@gmail.com with your Stripe receipt and we'll switch it on.
+          </Text>
+          <TouchableOpacity
+            onPress={() => setPaymentStuck(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={styles.payBannerClose}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <BottomTabBar active={activeTab} onPress={setActiveTab} />
 
       {newRewards.length > 0 && (
@@ -106,4 +129,11 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bg },
   content: { flex: 1 },
+  payBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    marginHorizontal: 12, marginBottom: 8, padding: 12, borderRadius: 10,
+    backgroundColor: Colors.card, borderWidth: 2, borderColor: Colors.borderStrong,
+  },
+  payBannerText: { flex: 1, color: Colors.text, fontSize: 13, lineHeight: 18 },
+  payBannerClose: { color: Colors.textDim, fontSize: 16 },
 });

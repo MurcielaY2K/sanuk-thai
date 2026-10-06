@@ -74,7 +74,7 @@ export default function WriteScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Top bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.close} onPress={() => router.replace('/')}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close" style={styles.close} onPress={() => router.replace('/')}>
           <Text style={styles.closeText}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.counter}>{index + 1} / {chars.length}</Text>
@@ -84,7 +84,7 @@ export default function WriteScreen() {
       {/* Category tabs */}
       <View style={styles.tabs}>
         {CHAR_GROUPS.map(g => (
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             key={g.key}
             style={[styles.tab, g.key === groupKey && styles.tabActive]}
             onPress={() => switchGroup(g.key)}
@@ -113,7 +113,7 @@ export default function WriteScreen() {
 
       {/* Mode toggle: Watch / Trace */}
       <View style={styles.modeTabs}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.modeTab, mode === 'watch' && styles.modeTabActive]}
           onPress={() => setMode('watch')}
           activeOpacity={0.8}
@@ -122,7 +122,7 @@ export default function WriteScreen() {
             ▶  Watch
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.modeTab, mode === 'trace' && styles.modeTabActive]}
           onPress={() => setMode('trace')}
           activeOpacity={0.8}
@@ -146,10 +146,10 @@ export default function WriteScreen() {
 
       {/* Navigation */}
       <View style={styles.nav}>
-        <TouchableOpacity style={styles.prevBtn} onPress={prev} activeOpacity={0.8}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Back" style={styles.prevBtn} onPress={prev} activeOpacity={0.8}>
           <Text style={styles.prevText}>←</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.nextBtn} onPress={next} activeOpacity={0.85}>
+        <TouchableOpacity accessibilityRole="button" style={styles.nextBtn} onPress={next} activeOpacity={0.85}>
           <Text style={styles.nextText}>
             {mode === 'trace' ? 'Got it  →' : 'Next  →'}
           </Text>

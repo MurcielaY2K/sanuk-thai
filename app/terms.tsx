@@ -5,7 +5,7 @@ export default function Terms() {
   return (
     <LegalPage
       title="Terms of Service"
-      updated="10 July 2026"
+      updated="29 September 2026"
       sections={[
         {
           paragraphs: [
@@ -66,6 +66,13 @@ export default function Terms() {
           heading: '9. Changes to these terms',
           paragraphs: [
             'We may update these terms; the date above reflects the latest version. Continued use after an update means you accept the new terms. Material changes affecting paid features will be announced in the app before they take effect.',
+          ],
+        },
+        {
+          heading: '10. Governing law and disputes',
+          paragraphs: [
+            'These terms are governed by the laws of the Kingdom of Thailand, and the courts of Thailand have jurisdiction over any dispute arising from them. If you are a consumer, this does not take away the protection of any mandatory law of the country where you live, and you may also bring a claim in the courts of that country where its law allows.',
+            'Before starting any formal dispute, please email coficollective@gmail.com — most problems (billing errors, access issues) can be fixed within a few days.',
           ],
         },
       ]}

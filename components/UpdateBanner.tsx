@@ -57,14 +57,14 @@ export default function UpdateBanner() {
           <Text style={styles.title}>Update ready!</Text>
           <Text style={styles.sub}>A new version of Sanuk Thai is available.</Text>
         </View>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.btn}
           onPress={() => { if (typeof window !== 'undefined') window.location.reload(); }}
           activeOpacity={0.85}
         >
           <Text style={styles.btnText}>UPDATE</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.close} onPress={() => setDismissed(true)} activeOpacity={0.7}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dismiss" style={styles.close} onPress={() => setDismissed(true)} activeOpacity={0.7}>
           <Text style={styles.closeText}>✕</Text>
         </TouchableOpacity>
       </View>

@@ -110,7 +110,7 @@ export default function LeaderboardTab() {
             <Text style={styles.myRankText}>Your rank: #{myRank}</Text>
           )}
         </View>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Refresh leaderboard"
           style={styles.refreshBtn}
           onPress={fetchLeaderboard}
           disabled={isLoadingLeaderboard}

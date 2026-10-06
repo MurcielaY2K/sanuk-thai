@@ -25,7 +25,7 @@ export default function FlagPicker({ visible, selected, onSelect, onClose }: Pro
           <Text style={styles.title}>Choose Flag</Text>
           <ScrollView contentContainerStyle={styles.grid}>
             {FLAG_ORDER.map(code => (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Flag ${code}`}
                 key={code}
                 style={[styles.cell, code === selCode && styles.cellActive]}
                 onPress={() => { onSelect(code); onClose(); }}

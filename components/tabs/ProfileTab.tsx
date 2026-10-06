@@ -19,6 +19,7 @@ import CloudSyncCard from '../CloudSyncCard';
 import PixelAvatar from '../PixelAvatar';
 import PixelFlag from '../PixelFlag';
 import { APP_VERSION } from '../../constants/version';
+import { getAnalyticsEnabled, setAnalyticsEnabled } from '../../lib/analytics';
 import { containsBlockedContent, isDisallowedUsername } from '../../lib/contentFilter';
 
 function Avatar({ emoji, frame, size = 72 }: { emoji: string; frame: FrameId; size?: number }) {
@@ -79,11 +80,11 @@ function ProfileSetup() {
         <Text style={styles.setupSub}>Your name appears on the global leaderboard</Text>
 
         <View style={styles.setupAvatarRow}>
-          <TouchableOpacity onPress={() => setAvatarOpen(true)} style={styles.setupAvatarBtn}>
+          <TouchableOpacity accessibilityRole="button" onPress={() => setAvatarOpen(true)} style={styles.setupAvatarBtn}>
             <PixelAvatar avatar={avatar} size={52} />
             <Text style={styles.setupAvatarEdit}>Change ›</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setFlagOpen(true)} style={styles.setupFlagBtn}>
+          <TouchableOpacity accessibilityRole="button" onPress={() => setFlagOpen(true)} style={styles.setupFlagBtn}>
             <PixelFlag value={flag} size={44} />
             <Text style={styles.setupAvatarEdit}>Flag ›</Text>
           </TouchableOpacity>
@@ -140,7 +141,7 @@ function ProfileSetup() {
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <TouchableOpacity style={styles.setupBtn} onPress={handleSubmit} disabled={loading} activeOpacity={0.85}>
+        <TouchableOpacity accessibilityRole="button" style={styles.setupBtn} onPress={handleSubmit} disabled={loading} activeOpacity={0.85}>
           {loading
             ? <ActivityIndicator color={Colors.bg} />
             : <Text style={styles.setupBtnText}>Create Profile</Text>
@@ -200,11 +201,11 @@ function ProfileEdit({ onDone }: { onDone: () => void }) {
       <Text style={styles.editTitle}>Edit Profile</Text>
 
       <View style={styles.editPickRow}>
-        <TouchableOpacity onPress={() => setAvatarOpen(true)} style={styles.editAvatarBtn}>
+        <TouchableOpacity accessibilityRole="button" onPress={() => setAvatarOpen(true)} style={styles.editAvatarBtn}>
           <PixelAvatar avatar={avatar} size={52} />
           <Text style={styles.editAvatarHint}>Change avatar ›</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setFlagOpen(true)} style={styles.editAvatarBtn}>
+        <TouchableOpacity accessibilityRole="button" onPress={() => setFlagOpen(true)} style={styles.editAvatarBtn}>
           <PixelFlag value={flag} size={44} />
           <Text style={styles.editAvatarHint}>Flag ›</Text>
         </TouchableOpacity>
@@ -232,7 +233,7 @@ function ProfileEdit({ onDone }: { onDone: () => void }) {
       <Text style={[styles.fieldLabel, { paddingHorizontal: 0, marginBottom: 8 }]}>PROFILE FRAME</Text>
       <View style={styles.frameRow}>
         {unlockedFrames.map(f => (
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             key={f}
             style={[
               styles.frameOpt,
@@ -247,10 +248,10 @@ function ProfileEdit({ onDone }: { onDone: () => void }) {
       </View>
 
       <View style={styles.editActions}>
-        <TouchableOpacity style={styles.cancelBtn} onPress={onDone}>
+        <TouchableOpacity accessibilityRole="button" style={styles.cancelBtn} onPress={onDone}>
           <Text style={styles.cancelBtnText}>Cancel</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.saveBtn} onPress={save} disabled={saving}>
+        <TouchableOpacity accessibilityRole="button" style={styles.saveBtn} onPress={save} disabled={saving}>
           {saving
             ? <ActivityIndicator color={Colors.bg} size="small" />
             : <Text style={styles.saveBtnText}>Save</Text>
@@ -281,7 +282,7 @@ function LevelCard() {
         {LEVELS.map(l => {
           const active = skillLevel === l.key;
           return (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               key={l.key}
               style={[styles.levelBtn, active && styles.levelBtnActive]}
               onPress={() => setSkillLevel(l.key)}
@@ -314,10 +315,10 @@ function SyncNudgeModal({ visible, onLink, onLater }: {
             Link your email and everything backs up automatically — so you can
             restore it if you ever switch or lose your phone.
           </Text>
-          <TouchableOpacity style={styles.nudgeBtn} onPress={onLink} activeOpacity={0.85}>
+          <TouchableOpacity accessibilityRole="button" style={styles.nudgeBtn} onPress={onLink} activeOpacity={0.85}>
             <Text style={styles.nudgeBtnText}>LINK MY EMAIL</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={onLater} activeOpacity={0.7} style={styles.nudgeLaterWrap}>
+          <TouchableOpacity accessibilityRole="button" onPress={onLater} activeOpacity={0.7} style={styles.nudgeLaterWrap}>
             <Text style={styles.nudgeLater}>Maybe later</Text>
           </TouchableOpacity>
         </Pressable>
@@ -370,7 +371,7 @@ export default function ProfileTab() {
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         <View style={styles.profileCard}>
-          <TouchableOpacity style={styles.editBtn} onPress={() => setEditing(true)}>
+          <TouchableOpacity accessibilityRole="button" style={styles.editBtn} onPress={() => setEditing(true)}>
             <Text style={styles.editBtnText}>✏️ Edit</Text>
           </TouchableOpacity>
 
@@ -451,18 +452,19 @@ export default function ProfileTab() {
         </View>
 
         <View style={styles.legalFooter}>
+          <AnalyticsToggle />
           <View style={styles.legalLinks}>
-            <TouchableOpacity onPress={() => router.push('/privacy')}>
+            <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/privacy')}>
               <Text style={styles.legalLink}>Privacy</Text>
             </TouchableOpacity>
             <Text style={styles.legalDot}>·</Text>
             {/* Refund policy stays live at /refunds (linked from Terms and
                 referenced at checkout) — it just isn't advertised here. */}
-            <TouchableOpacity onPress={() => router.push('/terms')}>
+            <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/terms')}>
               <Text style={styles.legalLink}>Terms</Text>
             </TouchableOpacity>
             <Text style={styles.legalDot}>·</Text>
-            <TouchableOpacity onPress={() => router.push('/delete-account')}>
+            <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/delete-account')}>
               <Text style={styles.legalLink}>Delete account</Text>
             </TouchableOpacity>
           </View>
@@ -481,6 +483,29 @@ function StatCard({ icon, value, label, color }: { icon: string; value: number |
       <Text style={[styles.statValue, { color, fontFamily: Fonts.hud }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
+  );
+}
+
+// Right-to-object switch for the anonymous usage analytics (see Privacy §4).
+function AnalyticsToggle() {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  useEffect(() => { getAnalyticsEnabled().then(setEnabled).catch(() => setEnabled(true)); }, []);
+  if (enabled === null) return null;
+  const flip = () => { const next = !enabled; setEnabled(next); setAnalyticsEnabled(next).catch(() => {}); };
+  return (
+    <TouchableOpacity
+      style={styles.analyticsRow}
+      onPress={flip}
+      activeOpacity={0.7}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: enabled }}
+      accessibilityLabel="Share anonymous usage data"
+    >
+      <View style={[styles.analyticsBox, enabled && styles.analyticsBoxOn]}>
+        {enabled ? <Text style={styles.analyticsTick}>✓</Text> : null}
+      </View>
+      <Text style={styles.analyticsText}>Share anonymous usage data to help improve the app</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -646,6 +671,14 @@ const styles = StyleSheet.create({
   levelBtnTextActive: { color: Colors.text },
 
   legalFooter: { alignItems: 'center', gap: 6, paddingBottom: 24 },
+  analyticsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, maxWidth: 320 },
+  analyticsBox: {
+    width: 16, height: 16, borderRadius: 3, borderWidth: 1.5,
+    borderColor: Colors.borderStrong, alignItems: 'center', justifyContent: 'center',
+  },
+  analyticsBoxOn: { backgroundColor: Colors.borderStrong },
+  analyticsTick: { color: Colors.bg, fontSize: 10, fontWeight: '700', lineHeight: 12 },
+  analyticsText: { color: Colors.textDim, fontSize: 11, fontFamily: Fonts.body, flexShrink: 1 },
   legalLinks: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   legalLink: { color: Colors.textDim, fontSize: 11, fontFamily: Fonts.body, textDecorationLine: 'underline' },
   legalDot: { color: Colors.textDim, fontSize: 11 },

@@ -98,7 +98,7 @@ export default function StrokeAnimation({ charId, char, size: fixedSize }: Props
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{done ? '↺  looping…' : 'watch & learn'}</Text>
         </View>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.replayBtn}
           onPress={() => {
             if (autoReplayRef.current) clearTimeout(autoReplayRef.current);

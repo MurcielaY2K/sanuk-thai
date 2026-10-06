@@ -408,7 +408,7 @@ function Tool({
   label, icon, onPress, accent,
 }: { label: string; icon: string; onPress: () => void; accent?: boolean }) {
   return (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       style={[styles.tool, accent && styles.toolAccent]}
       onPress={onPress}
       activeOpacity={0.7}

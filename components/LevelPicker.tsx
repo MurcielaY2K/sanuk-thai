@@ -63,7 +63,7 @@ export default function LevelPicker({ onPick }: { onPick: (level: SkillLevel) =>
         </Text>
 
         {OPTIONS.map(opt => (
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             key={opt.level}
             style={[
               styles.card,

@@ -23,7 +23,7 @@ export default function AvatarPicker({ visible, avatars, selected, onSelect, onC
           <Text style={styles.title}>Choose Avatar</Text>
           <ScrollView contentContainerStyle={styles.grid}>
             {avatars.map(emoji => (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${emoji.replace(/^px:/, '')} avatar`}
                 key={emoji}
                 style={[styles.cell, emoji === selected && styles.cellActive]}
                 onPress={() => { onSelect(emoji); onClose(); }}

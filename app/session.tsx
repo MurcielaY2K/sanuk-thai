@@ -125,7 +125,7 @@ export default function SessionScreen() {
           {wrong > 0 && (
             <Text style={styles.doneHint}>Missed words will come back sooner.</Text>
           )}
-          <TouchableOpacity style={styles.doneBtn} onPress={() => router.replace('/')}>
+          <TouchableOpacity accessibilityRole="button" style={styles.doneBtn} onPress={() => router.replace('/')}>
             <Text style={styles.doneBtnText}>Done  →</Text>
           </TouchableOpacity>
         </View>
@@ -139,7 +139,7 @@ export default function SessionScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Top bar with progress and close */}
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.closeBtn} onPress={() => router.replace('/')} activeOpacity={0.7}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close session" style={styles.closeBtn} onPress={() => router.replace('/')} activeOpacity={0.7}>
           <Text style={styles.closeBtnText}>✕</Text>
         </TouchableOpacity>
         <View style={styles.progressBar}>
@@ -162,7 +162,7 @@ export default function SessionScreen() {
         <Text style={[styles.romText, selected ? styles.romTextRevealed : undefined]}>
           {word.rom}
         </Text>
-        <TouchableOpacity style={styles.speakBtn} onPress={() => speak(word.th)} activeOpacity={0.7}>
+        <TouchableOpacity accessibilityRole="button" style={styles.speakBtn} onPress={() => speak(word.th)} activeOpacity={0.7}>
           <Text style={styles.speakBtnText}>🔊 tap to hear</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -176,7 +176,7 @@ export default function SessionScreen() {
           const showWrong = isSelected && !isCorrect;
 
           return (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               key={opt}
               style={[
                 styles.option,

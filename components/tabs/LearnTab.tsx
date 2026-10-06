@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { WORLDS, ALL_LESSONS, PRIVATE_WORLDS, PRIVATE_LESSONS, Lesson, World } from '../../data/worlds';
-import { useProgressStore, LessonState } from '../../store/progressStore';
+import { useProgressStore, LessonState, effectiveLessonState } from '../../store/progressStore';
 import { usePackStore } from '../../store/packStore';
 import { Colors } from '../../constants/colors';
 import { Fonts } from '../../constants/typography';
@@ -67,8 +67,8 @@ function getEffectiveState(
   lessonProgress: Record<string, LessonState>,
   isPremium: boolean,
 ): LessonState {
-  const stored = lessonProgress[lesson.id];
-  if (stored) return stored;
+  const eff = effectiveLessonState(lessonProgress[lesson.id], world.isPremium, isPremium);
+  if (eff) return eff;
   if (world.isPremium && !isPremium) return 'premium-locked';
   return 'locked';
 }
@@ -117,7 +117,12 @@ function LessonNode({
       ]}>
         {/* The whole stack (icon + label + START) is one tap target, so the
             visible START button actually starts the lesson. */}
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
+          accessibilityLabel={`${isCheckpoint ? 'Checkpoint' : 'Lesson'}: ${lesson.title}. ${
+            isComplete ? `Completed, ${stars} of 3 stars` :
+            isAvailable ? 'Ready to start' :
+            isPremLocked ? 'Premium — tap to unlock' : 'Locked'}`}
+          accessibilityState={{ disabled: isLocked && !isPremLocked }}
           style={{ alignItems: 'center' }}
           onPress={onPress}
           activeOpacity={0.8}

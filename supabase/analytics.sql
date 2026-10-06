@@ -30,6 +30,51 @@ create index if not exists analytics_events_event_time_idx
 create index if not exists analytics_events_device_idx
   on public.analytics_events (device_id, created_at);
 
+-- ── Abuse limits (AUDIT M1) ─────────────────────────────────────────────────
+-- Insert is open to anon by design, so volume has to be bounded server-side.
+-- Over-limit rows are dropped silently (the client never waits on analytics).
+--   * per device: 300 events / hour   (a real session sends a few dozen)
+--   * global:     3,000 events / minute (flood with rotating device ids)
+-- SECURITY DEFINER is required: clients have no SELECT policy on this table,
+-- so under RLS a plain count() would always see zero rows and never limit.
+create index if not exists analytics_events_time_idx
+  on public.analytics_events (created_at);
+
+create or replace function public.analytics_rate_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if (select count(*) from public.analytics_events
+        where device_id = new.device_id
+          and created_at > now() - interval '1 hour') >= 300 then
+    return null;
+  end if;
+  if (select count(*) from public.analytics_events
+        where created_at > now() - interval '1 minute') >= 3000 then
+    return null;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists analytics_rate_limit_trg on public.analytics_events;
+create trigger analytics_rate_limit_trg
+  before insert on public.analytics_events
+  for each row execute function public.analytics_rate_limit();
+
+-- ── Retention: 13 months (stated in the Privacy Policy) ─────────────────────
+-- pg_cron ships with Supabase; this schedules a nightly purge at 03:00 UTC.
+-- Re-running this file updates the job in place.
+create extension if not exists pg_cron with schema extensions;
+select cron.schedule(
+  'analytics-retention',
+  '0 3 * * *',
+  $$delete from public.analytics_events where created_at < now() - interval '13 months'$$
+);
+
 -- ── Queries to run in the SQL editor ────────────────────────────────────────
 -- Daily active devices:
 --   select date_trunc('day', created_at) d, count(distinct device_id)

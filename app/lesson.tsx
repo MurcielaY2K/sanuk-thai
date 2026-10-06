@@ -4,11 +4,11 @@ import {
   Animated, Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getLessonById, getNextLesson, Lesson, WORLDS, PRIVATE_WORLDS } from '../data/worlds';
+import { getLessonById, getNextLesson, isPremiumLesson, Lesson, WORLDS, PRIVATE_WORLDS } from '../data/worlds';
 import { VOCABULARY, Word } from '../data/vocabulary';
 import { PHRASE_CATEGORIES } from '../data/phrases';
 import { RENOVATION_WORDS, renoPhrasesForWorld } from '../data/renovation';
-import { useProgressStore } from '../store/progressStore';
+import { useProgressStore, effectiveLessonState } from '../store/progressStore';
 import { Colors } from '../constants/colors';
 import { Fonts } from '../constants/typography';
 import PixelSprite from '../components/PixelSprite';
@@ -213,7 +213,9 @@ export default function LessonScreen() {
   // Deep-link gate: a lesson is playable only when normal progression has
   // marked it available (or it's a completed replay). Without this, a crafted
   // /lesson?lessonId=… URL skips both progression and the Premium paywall.
-  const storedState = lesson ? lessonProgress[lesson.id] : undefined;
+  const storedState = lesson
+    ? effectiveLessonState(lessonProgress[lesson.id], isPremiumLesson(lesson.id), isPremium)
+    : undefined;
   const isUnlocked = storedState === 'available' || storedState === 'complete';
   // Beginners always see the romanization for pronunciation — never Thai-only.
   const romAlways = skillLevel === 'beginner';
@@ -317,7 +319,7 @@ export default function LessonScreen() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
           <Text style={styles.errorText}>{!lesson ? 'Lesson not found' : '🔒 Lesson locked — complete the path to get here'}</Text>
-          <TouchableOpacity style={styles.backBtn} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
+          <TouchableOpacity accessibilityRole="button" style={styles.backBtn} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
             <Text style={styles.backBtnText}>← Back</Text>
           </TouchableOpacity>
         </View>
@@ -347,7 +349,7 @@ export default function LessonScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn} activeOpacity={0.7}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close lesson" onPress={() => router.back()} style={styles.closeBtn} activeOpacity={0.7}>
           <Text style={styles.closeText}>✕</Text>
         </TouchableOpacity>
         <View style={styles.progressTrack}>
@@ -374,7 +376,7 @@ export default function LessonScreen() {
 
           {q.mode === 'meaning' && (
             <>
-              <TouchableOpacity onPress={() => speakThai(q.word.th)} activeOpacity={0.7}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${q.word.th}. Tap to hear it`} onPress={() => speakThai(q.word.th)} activeOpacity={0.7}>
                 <Text style={styles.thaiWord}>{q.word.th}</Text>
               </TouchableOpacity>
               {(romAlways || selected) && <Text style={styles.romText}>{q.word.rom}</Text>}
@@ -391,7 +393,7 @@ export default function LessonScreen() {
 
           {q.mode === 'listen' && (
             <>
-              <TouchableOpacity onPress={() => speakThai(q.word.th)} activeOpacity={0.7} style={styles.listenBtn}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Play audio" onPress={() => speakThai(q.word.th)} activeOpacity={0.7} style={styles.listenBtn}>
                 <Text style={styles.listenIcon}>🔊</Text>
               </TouchableOpacity>
               {(romAlways || selected)
@@ -440,7 +442,7 @@ export default function LessonScreen() {
             }
 
             return (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 key={choice}
                 style={[styles.choice, { backgroundColor: bgColor, borderColor }]}
                 onPress={() => handleAnswer(choice)}
@@ -538,7 +540,7 @@ function ResultScreen({ lesson, phase, correct, total, canRetry, onRetry }: {
         </View>
 
         {!passed && canRetry && (
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.continueBtn, Platform.OS === 'web' ? { boxShadow: `0 5px 0 0 ${Colors.emberDeep}` } as any : {}]}
             onPress={onRetry}
             activeOpacity={0.85}
@@ -546,7 +548,7 @@ function ResultScreen({ lesson, phase, correct, total, canRetry, onRetry }: {
             <Text style={styles.continueBtnText}>TRY AGAIN</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[
             passed ? styles.continueBtn : styles.exitBtn,
             passed && Platform.OS === 'web' ? { boxShadow: `0 5px 0 0 ${Colors.emberDeep}` } as any : {},

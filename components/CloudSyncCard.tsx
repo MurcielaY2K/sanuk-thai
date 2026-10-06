@@ -108,7 +108,7 @@ export default function CloudSyncCard() {
               autoCorrect={false}
               keyboardType="email-address"
             />
-            <TouchableOpacity style={styles.btn} onPress={linkEmail} disabled={busy}>
+            <TouchableOpacity accessibilityRole="button" style={styles.btn} onPress={linkEmail} disabled={busy}>
               {busy ? <ActivityIndicator color={Colors.bg} size="small" /> : <Text style={styles.btnText}>Link email</Text>}
             </TouchableOpacity>
           </>
@@ -129,7 +129,7 @@ export default function CloudSyncCard() {
             autoCorrect={false}
             keyboardType="email-address"
           />
-          <TouchableOpacity style={styles.btn} onPress={sendMagicLink} disabled={busy}>
+          <TouchableOpacity accessibilityRole="button" style={styles.btn} onPress={sendMagicLink} disabled={busy}>
             {busy ? <ActivityIndicator color={Colors.bg} size="small" /> : <Text style={styles.btnText}>Send magic link</Text>}
           </TouchableOpacity>
         </>
@@ -137,7 +137,7 @@ export default function CloudSyncCard() {
 
       {authId ? (
         <View style={styles.syncRow}>
-          <TouchableOpacity style={styles.syncBtn} onPress={syncNow} disabled={busy}>
+          <TouchableOpacity accessibilityRole="button" style={styles.syncBtn} onPress={syncNow} disabled={busy}>
             <Text style={styles.syncBtnText}>{busy ? 'Syncing…' : 'Sync now'}</Text>
           </TouchableOpacity>
           <Text style={styles.syncMeta}>
