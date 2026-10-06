@@ -79,6 +79,7 @@ export default function PremiumModal({ visible, onClose }: Props) {
                   <TouchableOpacity accessibilityRole="radio"
                     accessibilityLabel={`${t.label}, ${t.price} ${t.per}${t.note ? `, ${t.note}` : ''}`}
                     accessibilityState={{ checked: active }}
+                    aria-checked={active}
                     key={t.id}
                     style={[styles.tier, active && styles.tierActive]}
                     onPress={() => setTierId(t.id)}

@@ -173,3 +173,35 @@ Things I specifically tried to break and could not:
 Still outstanding from `LAUNCH_PLAN.md` and unverifiable from here (they are
 server-side or account-side): Resend domain verification, the Supabase auth
 URL configuration, and whether `analytics.sql` has been run.
+
+---
+
+## Resolution status (6 October 2026)
+
+| # | Finding | Status |
+|---|---|---|
+| B1 | Privacy policy omitted analytics | ✅ Fixed — new §4 discloses the device id, every event, purpose, legal basis and retention; §1 corrected. Made true in code: in-app opt-out (Profile, also on the setup screen) that deletes the device id, and an enforced 13-month purge. |
+| B2 | Hold flag laundered paywall state | ✅ Fixed — unlock derived at read time (`effectiveLessonState`); storage is never rewritten. Also closes: a lapsed subscription now re-locks. Verified in browser + 8 unit cases. |
+| I1 | No governing law | ✅ Fixed — Terms §10: Thai law and courts, mandatory consumer protections of the user's country preserved. |
+| I2 | Accessibility absent | ✅ Fixed — all 66 touchables have roles; 15 icon-only buttons labelled; tabs, lesson nodes, tier picker and opt-out expose state via `aria-*`. Verified: 0 unnamed buttons on Learn. |
+| I3 | Unlinked payments lost silently | ✅ Fixed (needs deploy, below) — webhook matches buyers by confirmed email, parks the rest in `unlinked_payments`, and returns 500 on failed writes so Stripe retries. App tells a buyer how to get help if Premium hasn't appeared after 40 s. |
+| — | **New:** webhook granted access before payment for delayed methods | ✅ Fixed — checks `payment_status`; grants on `async_payment_succeeded`. |
+| — | **New:** webhook ignored database write errors | ✅ Fixed — see I3. |
+| I4 | No crash reporting | ⏳ Needs your Sentry DSN (`EXPO_PUBLIC_SENTRY_DSN` at build time). Already disclosed in the privacy policy. |
+| M1 | Analytics unrate-limited | ✅ Fixed (needs SQL run) — 300/h per device, 3,000/min global, via a `SECURITY DEFINER` trigger. |
+| M2 | Heavy first load | ⏳ Deferred — no functional risk; worth doing before a big promotion push. |
+| M3 | No CSP | ✅ Fixed — `scripts/inject-csp.mjs` hashes inline scripts (no `'unsafe-inline'` for script). Verified: 0 violations on all 8 routes; fonts, audio and service worker all load. |
+| M4 | Sync silently dropped progress | ✅ Fixed — winner still wins, but completed lessons and best stars are unioned and pushed back. |
+| M5 | Private pack in bundle | ✅ By design, documented. |
+| M6 | Romanization unreviewed | ⏳ Native-speaker review (content, not code). |
+| L1 | `review.html` indexable | ✅ Fixed — `noindex` meta. |
+| L2 | Raw errors shown to users | ✅ Fixed — worse than recorded: any stray failed request painted a red banner. Now raw output only with `?debug=1`; users see a reload prompt only if the app fails to start. |
+| L3 | Sentry bundled unused | ⏳ Moot once I4 is done. |
+| L4 | npm advisories | ⏳ None reach the browser; `npm audit fix` is optional. |
+
+### Actions only you can take
+1. **Re-run SQL** in Supabase → SQL Editor: `supabase/analytics.sql` and `supabase/entitlements.sql` (both safe to re-run).
+2. **Redeploy the webhook:** `supabase functions deploy stripe-webhook --no-verify-jwt`.
+3. **Stripe → Developers → Webhooks:** add the event `checkout.session.async_payment_succeeded` to the endpoint.
+4. **Sentry:** create a project, set `EXPO_PUBLIC_SENTRY_DSN`, redeploy.
+5. **Decide on early testers:** with B2 fixed, flipping `PREMIUM_ON_HOLD` now really re-locks premium lessons that testers reached but did not finish (completed ones stay replayable). If you want to grandfather them, that needs a deliberate rule, not the old accident.

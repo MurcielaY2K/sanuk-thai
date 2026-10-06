@@ -151,6 +151,12 @@ function ProfileSetup() {
         <View style={{ marginTop: 24 }}>
           <CloudSyncCard />
         </View>
+
+        {/* Analytics runs whether or not a profile exists, so the right to
+            object must be reachable from the setup screen too. */}
+        <View style={[styles.legalFooter, { marginTop: 16 }]}>
+          <AnalyticsToggle />
+        </View>
       </ScrollView>
 
       <AvatarPicker
@@ -499,6 +505,7 @@ function AnalyticsToggle() {
       activeOpacity={0.7}
       accessibilityRole="switch"
       accessibilityState={{ checked: enabled }}
+      aria-checked={enabled}
       accessibilityLabel="Share anonymous usage data"
     >
       <View style={[styles.analyticsBox, enabled && styles.analyticsBoxOn]}>

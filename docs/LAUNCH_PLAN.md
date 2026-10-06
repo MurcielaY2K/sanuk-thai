@@ -34,6 +34,14 @@ money is **content quality + distribution**, in this order.
   the sitemap/robots and no longer linked from the paywall or profile footer
   — still reachable via Terms → Refund Policy.
 
+## 🧾 Audit follow-ups (see docs/AUDIT.md → Resolution status)
+
+Code fixes are deployed. Still needed from you: re-run `analytics.sql` and
+`entitlements.sql`; redeploy `stripe-webhook`; add the
+`checkout.session.async_payment_succeeded` event to the Stripe endpoint; set a
+Sentry DSN; decide whether to grandfather early testers before flipping
+`PREMIUM_ON_HOLD`.
+
 ## 🔑 Step 1 — Native-quality audio (highest leverage, ~1 hour of your time)
 
 1. Create a Google Cloud account → enable **Cloud Text-to-Speech API** →

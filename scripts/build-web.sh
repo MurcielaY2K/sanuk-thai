@@ -28,4 +28,7 @@ if [ -n "$BASE_PATH" ]; then
     "s|src=\"/_expo/|src=\"${BASE_PATH}/_expo/|g; s|href=\"/_expo/|href=\"${BASE_PATH}/_expo/|g" {} +
 fi
 
+# Last HTML transform: CSP hashes must be computed on the final inline scripts.
+node scripts/inject-csp.mjs dist
+
 echo "✓ built for BASE_PATH='${BASE_PATH}' SITE_ORIGIN='${SITE_ORIGIN}'"

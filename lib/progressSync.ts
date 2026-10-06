@@ -146,6 +146,24 @@ async function applySnapshot(snap: ProgressSnapshot): Promise<void> {
   ]);
 }
 
+// Lesson-state precedence: progress never goes backwards.
+const STATE_RANK: Record<string, number> = { locked: 0, 'premium-locked': 1, available: 2, complete: 3 };
+
+export function mergeGrowOnly(winner: ProgressSnapshot, other: ProgressSnapshot): ProgressSnapshot {
+  let changed = false;
+  const lessonProgress = { ...winner.lessonProgress };
+  for (const [id, st] of Object.entries(other.lessonProgress)) {
+    if ((STATE_RANK[st] ?? -1) > (STATE_RANK[lessonProgress[id]] ?? -1)) {
+      lessonProgress[id] = st; changed = true;
+    }
+  }
+  const lessonStars = { ...(winner.lessonStars ?? {}) };
+  for (const [id, n] of Object.entries(other.lessonStars ?? {})) {
+    if (n > (lessonStars[id] ?? 0)) { lessonStars[id] = n; changed = true; }
+  }
+  return changed ? { ...winner, lessonProgress, lessonStars } : winner;
+}
+
 async function authUid(): Promise<string | null> {
   if (!SUPABASE_CONFIGURED || !supabase) return null;
   const { data: { session } } = await supabase.auth.getSession();
@@ -204,7 +222,13 @@ export async function pullAndMerge(): Promise<'remote' | 'local' | 'none'> {
     (remote.xp === local.xp && remote.streak === local.streak && remote.savedAt > local.savedAt);
 
   if (remoteWins) {
-    await applySnapshot(remote);
+    // The higher-XP snapshot still wins wholesale, except for the two things
+    // that only ever grow and are cheap to lose silently: which lessons are
+    // done and their best star rating. Without this, a lesson finished on the
+    // lower-XP device simply vanished on sync.
+    const merged = mergeGrowOnly(remote, local);
+    await applySnapshot(merged);
+    if (merged !== remote) await pushProgress();   // converge both sides
     setStatus({ state: 'idle', lastSyncedAt: Date.now() });
     return 'remote';
   }

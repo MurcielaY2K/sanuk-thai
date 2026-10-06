@@ -123,6 +123,7 @@ function LessonNode({
             isAvailable ? 'Ready to start' :
             isPremLocked ? 'Premium — tap to unlock' : 'Locked'}`}
           accessibilityState={{ disabled: isLocked && !isPremLocked }}
+          aria-disabled={isLocked && !isPremLocked}
           style={{ alignItems: 'center' }}
           onPress={onPress}
           activeOpacity={0.8}

@@ -41,6 +41,7 @@ export default function BottomTabBar({ active, onPress }: Props) {
           <TouchableOpacity accessibilityRole="tab"
             accessibilityLabel={tab.label}
             accessibilityState={{ selected: isActive }}
+            aria-selected={isActive}
             key={tab.id}
             style={styles.tab}
             onPress={() => onPress(tab.id)}
