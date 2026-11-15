@@ -17,6 +17,7 @@ fi
 echo "→ Validating…"
 npx tsc --noEmit
 node scripts/validate-vocab.mjs
+node scripts/validate-conversations.mjs
 
 echo "→ Building (stamps constants/version.ts + public/version.json)…"
 npm run build:web

@@ -54,6 +54,12 @@ it's incremental. ✅ **Done for all 3,171 vocabulary words.** A re-run with a
 fresh key will also record the phrasebook sentences (checkpoint phrase
 questions + Read tab) that were added afterwards — ~160 new clips, still free.
 
+> **Conversations (added later):** `data/conversations.ts` holds 20 real-life
+> dialogues (120 lines, each "you" line in a male and a female form). They are
+> machine-authored like the rest of the Thai — include them in the Step 2
+> review. Step 1's `node scripts/gen-audio.mjs` already picks them up; until it
+> is re-run they play through the device's Thai voice.
+
 ## 🔑 Step 2 — Native speaker review (~$100–200, one week)
 
 1. Post on Upwork/Fastwork: "Review Thai vocabulary entries for a

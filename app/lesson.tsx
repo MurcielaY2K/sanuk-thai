@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
-  Animated, Platform,
+  Animated, Platform, ScrollView,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getLessonById, getNextLesson, isPremiumLesson, Lesson, WORLDS, PRIVATE_WORLDS } from '../data/worlds';
@@ -12,6 +12,8 @@ import { useProgressStore, effectiveLessonState } from '../store/progressStore';
 import { Colors } from '../constants/colors';
 import { Fonts } from '../constants/typography';
 import PixelSprite from '../components/PixelSprite';
+import SentenceBuilder from '../components/SentenceBuilder';
+import MatchPairs from '../components/MatchPairs';
 import { speakThai, speechAvailable } from '../lib/audio';
 import { track } from '../lib/analytics';
 import { SPRITES } from '../data/sprites';
@@ -34,7 +36,9 @@ const PASS_CHECKPOINT = 0.8;
 //  reading: see phonetics → pick Thai      (tier 4)
 //  phrase:  see an English sentence → pick the Thai phrase (checkpoints only;
 //           beginners pick between romanizations instead of Thai script)
-type Mode = 'meaning' | 'reverse' | 'listen' | 'reading' | 'phrase';
+//  match:   pair four Thai words with their meanings (every lesson)
+//  build:   see an English sentence → assemble it from word tiles (every lesson)
+type Mode = 'meaning' | 'reverse' | 'listen' | 'reading' | 'phrase' | 'match' | 'build';
 const TIER_MODES: Record<number, Mode[]> = {
   1: ['meaning', 'meaning', 'meaning'],
   2: ['meaning', 'meaning', 'reverse'],
@@ -59,11 +63,19 @@ function effectiveModes(tier: number, level: Level): Mode[] {
   return TIER_MODES[t].filter(m => m !== 'listen' || speechAvailable());
 }
 
+interface Tile { th: string; rom: string }
+
 interface Question {
-  word: Word;
+  word: Word;          // for match: unused placeholder; for build/phrase: the whole sentence
   mode: Mode;
   choices: string[];
   answer: string;
+  pairs?: Word[];      // match
+  tokens?: Tile[];     // build: the sentence, word by word
+  bank?: Tile[];       // build: extra wrong tiles
+  // A question answered wrong comes back once at the end of the lesson.
+  // The repeat is practice only: it doesn't change the score or cost a heart.
+  retry?: boolean;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -104,13 +116,14 @@ const WORLD_PHRASE_KEYS: Record<string, string[]> = {
   w17: ['about', 'greetings'],
 };
 
-interface PhraseEntry { th: string; rom: string; en: string }
+interface PhraseEntry { th: string; rom: string; en: string; tokens: Tile[] }
 
-const toPhraseEntries = (cats: { sentences: { tokens: { th: string; rom: string }[]; en: string }[] }[]) =>
+const toPhraseEntries = (cats: { sentences: { tokens: { th: string; rom: string }[]; en: string }[] }[]): PhraseEntry[] =>
   cats.flatMap(c => c.sentences).map(s => ({
     th: s.tokens.map(t => t.th).join(''),
     rom: s.tokens.map(t => t.rom).join(' '),
     en: s.en,
+    tokens: s.tokens.map(t => ({ th: t.th, rom: t.rom })),
   }));
 
 function phrasePool(worldId: string): { topic: PhraseEntry[]; all: PhraseEntry[] } {
@@ -154,6 +167,26 @@ function buildPhraseQuestions(worldId: string, tier: number, level: Level): Ques
   });
 }
 
+// One "build the sentence" question from the world's phrasebook topic: a
+// short sentence (3–6 words) plus a few wrong tiles taken from other phrases.
+function buildSentenceQuestion(worldId: string, level: Level): Question | null {
+  const { topic, all } = phrasePool(worldId);
+  const usable = (list: PhraseEntry[]) => list.filter(s => s.tokens.length >= 3 && s.tokens.length <= 6);
+  const candidates = usable(topic).length ? usable(topic) : usable(all);
+  if (candidates.length === 0) return null;
+  const sentence = shuffle(candidates)[0];
+
+  const inAnswer = new Set(sentence.tokens.map(t => t.th));
+  const bank: Tile[] = [];
+  const extra = level === 'beginner' ? 2 : 3;
+  for (const t of shuffle(all.filter(s => s.th !== sentence.th).flatMap(s => s.tokens))) {
+    if (bank.length >= extra) break;
+    if (!inAnswer.has(t.th)) { inAnswer.add(t.th); bank.push(t); }
+  }
+  const word: Word = { id: `build:${sentence.th}`, th: sentence.th, rom: sentence.rom, en: sentence.en, category: 'phrase' };
+  return { word, mode: 'build', choices: [], answer: sentence.th, tokens: sentence.tokens, bank };
+}
+
 function buildQuestions(lesson: Lesson, level: Level): Question[] {
   const isPrivate = PRIVATE_WORLDS.some(w => w.id === lesson.worldId);
   const world = (isPrivate ? PRIVATE_WORLDS : WORLDS).find(w => w.id === lesson.worldId);
@@ -172,7 +205,7 @@ function buildQuestions(lesson: Lesson, level: Level): Question[] {
   // same-category look-alikes (advanced always, intermediate from tier 2 up).
   const hardDistractors = level === 'advanced' || (level !== 'beginner' && tier >= 2);
 
-  const questions = selected.map((word, i) => {
+  const questions: Question[] = selected.map((word, i) => {
     const mode = modes[i % modes.length];
     const field: 'en' | 'th' = (mode === 'reverse' || mode === 'reading') ? 'th' : 'en';
 
@@ -187,10 +220,20 @@ function buildQuestions(lesson: Lesson, level: Level): Question[] {
     return { word, mode, choices: shuffle([word[field], ...distractors]), answer: word[field] };
   });
 
+  // Mid-lesson: match four of this lesson's words with their meanings.
+  if (words.length >= 4) {
+    const pairs = shuffle(words).slice(0, 4);
+    questions.splice(Math.min(3, questions.length), 0,
+      { word: pairs[0], mode: 'match', choices: [], answer: '', pairs });
+  }
+
   // Checkpoints graduate with real phrases from the world's topic.
   if (lesson.type === 'checkpoint') {
     questions.push(...buildPhraseQuestions(lesson.worldId, tier, level));
   }
+  // Every lesson ends by putting words to use: build a real sentence.
+  const build = buildSentenceQuestion(lesson.worldId, level);
+  if (build) questions.push(build);
   return questions;
 }
 
@@ -201,6 +244,8 @@ const PROMPTS: Record<Mode, string> = {
   listen: 'WHAT DID YOU HEAR?',
   reading: 'WHICH WORD READS LIKE THIS?',
   phrase: 'HOW DO YOU SAY THIS PHRASE?',
+  match: 'MATCH THE PAIRS',
+  build: 'BUILD THIS SENTENCE',
 };
 
 type Phase = 'quiz' | 'pass' | 'fail' | 'hearts';
@@ -225,6 +270,13 @@ export default function LessonScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [correct, setCorrect] = useState(0);
   const [phase, setPhase] = useState<Phase>('quiz');
+  // Build questions wait for a CONTINUE tap so there is time to read the
+  // answer; `advance` holds what that tap does.
+  const [awaiting, setAwaiting] = useState(false);
+  const [round, setRound] = useState(0);
+  const advance = useRef<() => void>(() => {});
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (advanceTimer.current) clearTimeout(advanceTimer.current); }, []);
 
   const cardScale = useRef(new Animated.Value(0.92)).current;
   const heartShake = useRef(new Animated.Value(0)).current;
@@ -245,30 +297,33 @@ export default function LessonScreen() {
       const t = setTimeout(() => speakThai(q.word.th), 400);
       return () => clearTimeout(t);
     }
-  }, [qIdx, questions]);
+    // Keyed on the question position and the attempt — not on `questions`,
+    // which also changes when a missed question is re-queued mid-feedback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qIdx, round]);
 
   const retry = () => {
     if (!lesson) return;
+    setRound(r => r + 1);
     setQuestions(buildQuestions(lesson, skillLevel));
     setQIdx(0);
     setSelected(null);
     setCorrect(0);
+    setAwaiting(false);
     setPhase('quiz');
   };
 
-  const handleAnswer = (choice: string) => {
-    if (selected) return;
+  // Record the outcome of the current question, then move on — either after
+  // `delay` ms, or (delay === null) when the learner taps CONTINUE.
+  const settle = (isCorrect: boolean, delay: number | null) => {
     const q = questions[qIdx];
-    const isCorrect = choice === q.answer;
-    setSelected(choice);
-    // For modes where Thai was hidden or unheard, say it now as feedback.
-    if (q.mode !== 'meaning') speakThai(q.word.th);
-
+    const first = !q.retry;
+    const finalCorrect = correct + (isCorrect && first ? 1 : 0);
     let ranOutOfHearts = false;
     if (isCorrect) {
-      setCorrect(c => c + 1);
+      if (first) setCorrect(finalCorrect);
     } else {
-      if (!isPremium) {
+      if (!isPremium && first) {
         ranOutOfHearts = hearts <= 1;
         loseHeart();
       }
@@ -279,22 +334,47 @@ export default function LessonScreen() {
         Animated.timing(heartShake, { toValue: 0, duration: 60, useNativeDriver: true }),
       ]).start();
     }
+    // A first-time miss comes back once at the end.
+    const requeue = !isCorrect && first && !ranOutOfHearts;
+    if (requeue) {
+      setQuestions(qs => [...qs, { ...q, retry: true, choices: shuffle(q.choices) }]);
+    }
+    const total = questions.length + (requeue ? 1 : 0);
 
-    setTimeout(() => {
+    advance.current = () => {
+      setAwaiting(false);
       if (ranOutOfHearts) {
         setPhase('hearts');
-      } else if (qIdx + 1 >= questions.length) {
-        finishLesson(isCorrect ? correct + 1 : correct);
+      } else if (qIdx + 1 >= total) {
+        finishLesson(finalCorrect);
       } else {
         setSelected(null);
         setQIdx(i => i + 1);
       }
-    }, 1100);
+    };
+    if (delay === null) setAwaiting(true);
+    else advanceTimer.current = setTimeout(() => advance.current(), delay);
+  };
+
+  const handleAnswer = (choice: string) => {
+    if (selected) return;
+    const q = questions[qIdx];
+    setSelected(choice);
+    // For modes where Thai was hidden or unheard, say it now as feedback.
+    if (q.mode !== 'meaning') speakThai(q.word.th);
+    settle(choice === q.answer, 1100);
+  };
+
+  const handleBuilt = (ok: boolean) => {
+    speakThai(questions[qIdx].word.th);
+    settle(ok, null);
   };
 
   const finishLesson = (finalCorrect: number) => {
     if (!lesson) return;
-    const pct = questions.length > 0 ? finalCorrect / questions.length : 0;
+    // Scored on first attempts only — repeats of missed questions don't count.
+    const scored = questions.filter(x => !x.retry).length;
+    const pct = scored > 0 ? finalCorrect / scored : 0;
     const threshold = lesson.type === 'checkpoint' ? PASS_CHECKPOINT : PASS_LESSON;
 
     if (pct < threshold) {
@@ -333,7 +413,7 @@ export default function LessonScreen() {
         lesson={lesson}
         phase={phase}
         correct={correct}
-        total={questions.length}
+        total={questions.filter(x => !x.retry).length}
         canRetry={isPremium || hearts > 0}
         onRetry={retry}
       />
@@ -365,14 +445,18 @@ export default function LessonScreen() {
         </Animated.View>
       </View>
 
-      <View style={styles.body}>
+      <ScrollView style={styles.bodyScroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         {/* Question card */}
         <Animated.View style={[
           styles.questionCard,
+          (q.mode === 'match' || q.mode === 'build') && styles.questionCardCompact,
           { transform: [{ scale: cardScale }] },
           Platform.OS === 'web' ? { boxShadow: `0 4px 0 0 ${Colors.borderStrong}` } as any : {},
         ]}>
+          {q.retry && <Text style={styles.retryTag}>↻ PREVIOUS MISTAKE</Text>}
           <Text style={styles.questionPrompt}>{PROMPTS[q.mode]}</Text>
+
+          {q.mode === 'build' && <Text style={styles.phraseEn}>“{q.word.en}”</Text>}
 
           {q.mode === 'meaning' && (
             <>
@@ -420,6 +504,25 @@ export default function LessonScreen() {
           )}
         </Animated.View>
 
+        {q.mode === 'match' && q.pairs && (
+          <MatchPairs
+            key={qIdx}
+            pairs={q.pairs}
+            showRom={romAlways}
+            onDone={mistakes => settle(mistakes === 0, 350)}
+          />
+        )}
+
+        {q.mode === 'build' && q.tokens && (
+          <SentenceBuilder
+            key={qIdx}
+            answer={q.tokens}
+            distractors={q.bank ?? []}
+            showRom={romAlways}
+            onResult={handleBuilt}
+          />
+        )}
+
         {/* Choices */}
         <View style={styles.choices}>
           {q.choices.map(choice => {
@@ -462,9 +565,18 @@ export default function LessonScreen() {
             );
           })}
         </View>
-      </View>
+      </ScrollView>
 
       <View style={styles.footer}>
+        {awaiting && (
+          <TouchableOpacity accessibilityRole="button"
+            style={[styles.continueBtn, styles.footerBtn, Platform.OS === 'web' ? { boxShadow: `0 5px 0 0 ${Colors.emberDeep}` } as any : {}]}
+            onPress={() => advance.current()}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.continueBtnText}>CONTINUE</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.counterText}>{qIdx + 1} / {questions.length}</Text>
       </View>
     </SafeAreaView>
@@ -596,7 +708,8 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
 
-  body: { flex: 1, paddingHorizontal: 20, paddingTop: 16, gap: 20 },
+  bodyScroll: { flex: 1 },
+  body: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, gap: 20 },
 
   questionCard: {
     backgroundColor: Colors.card,
@@ -608,6 +721,10 @@ const styles = StyleSheet.create({
     gap: 10,
     minHeight: 170,
     justifyContent: 'center',
+  },
+  questionCardCompact: { minHeight: 0, paddingVertical: 18 },
+  retryTag: {
+    color: Colors.emberDeep, fontSize: 9, fontFamily: Fonts.hud, letterSpacing: 1.5,
   },
   questionPrompt: {
     color: Colors.textDim,
@@ -678,7 +795,8 @@ const styles = StyleSheet.create({
   choiceMark: { color: Colors.correct, fontSize: 18, fontWeight: '700' },
   choiceMarkWrong: { color: Colors.wrong, fontSize: 18, fontWeight: '700' },
 
-  footer: { alignItems: 'center', paddingBottom: 24 },
+  footer: { alignItems: 'center', paddingBottom: 24, paddingHorizontal: 20, gap: 10 },
+  footerBtn: { marginTop: 0 },
   counterText: { color: Colors.textDim, fontSize: 11, fontFamily: Fonts.hud },
 
   errorText: { color: Colors.textDim, fontSize: 15, fontFamily: Fonts.body },

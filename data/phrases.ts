@@ -532,7 +532,7 @@ export const PHRASE_CATEGORIES: PhraseCategory[] = [
       {
         tokens: [
           { th: 'รวม', rom: 'ruam', en: 'total' },
-          { th: 'ทั้งหมด', rom: 'táng-mòt', en: 'all together' },
+          { th: 'ทั้งหมด', rom: 'tháng-mòt', en: 'all together' },
           { th: 'เท่าไร', rom: 'thâo-rai', en: 'how much' },
         ],
         en: 'How much is it all together?',

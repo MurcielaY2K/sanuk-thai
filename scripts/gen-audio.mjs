@@ -14,6 +14,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadTsModule } from './lib/load-ts.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(root, 'public/audio');
@@ -78,9 +79,26 @@ const renoWordBlock = renoSrc.match(/RENOVATION_WORDS: Word\[\] = \[([\s\S]*?)\n
 const renoWords = [...renoWordBlock.matchAll(/th:\s*'([^']+)'/g)].map(m => m[1]);
 const renoPhrases = extractSentences('data/renovation.ts');
 
+// Conversations (data/conversations.ts) — every line as both a male and a
+// female learner says it, plus each word for the tap-to-hear tiles.
+const convMod = await loadTsModule(join(root, 'data/conversations.ts'));
+const convSentences = [];
+const convTokens = [];
+for (const c of convMod.CONVERSATIONS) {
+  for (const line of c.lines) {
+    for (const g of ['m', 'f']) {
+      const s = convMod.resolveLine(line, g);
+      convSentences.push(convMod.sentenceTh(s));
+      convTokens.push(...s.tokens.map(t => t.th));
+    }
+  }
+}
+
 const texts = [...new Set([
   ...alphaNames, ...lessonWords,
+  ...convSentences,
   ...phrases.sentences, ...readingSentences,
+  ...convTokens,
   ...phrases.tokens, ...readingTokens,
   ...renoWords, ...renoPhrases.sentences, ...renoPhrases.tokens,
   ...otherWords,

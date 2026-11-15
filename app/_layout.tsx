@@ -63,6 +63,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" options={{ animation: 'fade' }} />
         <Stack.Screen name="lesson" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="conversation" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="session" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="write" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="read" options={{ animation: 'slide_from_bottom' }} />

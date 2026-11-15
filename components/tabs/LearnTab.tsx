@@ -16,6 +16,8 @@ import PixelEmoji from '../PixelEmoji';
 import PixelSprite from '../PixelSprite';
 import SpiritHero from '../SpiritHero';
 import { SPRITES, type SpriteName } from '../../data/sprites';
+import { Conversation, conversationsForWorld, conversationKey } from '../../data/conversations';
+import { conversationState, lessonsUntilUnlock, ConversationState } from '../../lib/conversations';
 
 // Each world gets a pixel-art guardian in its header.
 const WORLD_SPRITE: Record<string, SpriteName> = {
@@ -167,6 +169,56 @@ function LessonNode({
         </TouchableOpacity>
       </Animated.View>
     </View>
+  );
+}
+
+// A real-life dialogue attached to a world: sits under the world header and
+// opens once a few of that world's lessons are done.
+function ConversationCard({ conv, state, stars, toGo, onPress }: {
+  conv: Conversation; state: ConversationState; stars: number; toGo: number; onPress: () => void;
+}) {
+  const locked = state === 'locked';
+  const premLocked = state === 'premium-locked';
+  const done = state === 'complete';
+  const status = done ? `Completed, ${stars} of 3 stars`
+    : state === 'available' ? 'Ready to start'
+    : premLocked ? 'Premium — tap to unlock'
+    : `Locked — finish ${toGo} more lesson${toGo === 1 ? '' : 's'} in this world`;
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={`Conversation: ${conv.title}. ${status}`}
+      accessibilityState={{ disabled: locked }}
+      aria-disabled={locked}
+      style={[
+        styles.convCard,
+        done && { backgroundColor: Colors.realmGrove },
+        (locked || premLocked) && styles.convCardLocked,
+        Platform.OS === 'web' && !locked && !premLocked ? { boxShadow: `0 3px 0 0 ${Colors.borderStrong}` } as any : {},
+      ]}
+      onPress={onPress}
+      disabled={locked}
+      activeOpacity={0.8}
+    >
+      <View style={[styles.convIcon, (locked || premLocked) && { opacity: 0.45 }]}>
+        <PixelEmoji emoji={premLocked ? '👑' : conv.icon} size={26} />
+      </View>
+      <View style={styles.convBody}>
+        <Text style={styles.convKicker}>💬 REAL CONVERSATION</Text>
+        <Text style={[styles.convTitle, locked && { color: Colors.textMuted }]} numberOfLines={1}>{conv.title}</Text>
+        <Text style={styles.convSub} numberOfLines={1}>
+          {done ? '★'.repeat(stars) + '☆'.repeat(3 - stars) + '  ·  tap to replay'
+            : state === 'available' ? `Talk with ${conv.npc}`
+            : premLocked ? 'Premium'
+            : `Finish ${toGo} more lesson${toGo === 1 ? '' : 's'} to unlock`}
+        </Text>
+      </View>
+      {state === 'available' && (
+        <View style={styles.convStart}><Text style={styles.startText}>START</Text></View>
+      )}
+      {done && <Text style={styles.convCheck}>✓</Text>}
+      {locked && <Text style={styles.convLock}>🔒</Text>}
+    </TouchableOpacity>
   );
 }
 
@@ -336,7 +388,28 @@ export default function LearnTab() {
           if (item.type === 'header') {
             const done = item.world.lessons.filter(l => lessonProgress[l.id] === 'complete').length;
             const starSum = item.world.lessons.reduce((acc, l) => acc + (lessonStars[l.id] ?? 0), 0);
-            return <WorldHeader key={`h-${item.world.id}`} world={item.world} done={done} stars={starSum} />;
+            const convs = conversationsForWorld(item.world.id);
+            return (
+              <React.Fragment key={`h-${item.world.id}`}>
+                <WorldHeader world={item.world} done={done} stars={starSum} />
+                {convs.map(conv => {
+                  const cs = conversationState(conv, lessonProgress, isPremium);
+                  return (
+                    <ConversationCard
+                      key={conv.id}
+                      conv={conv}
+                      state={cs}
+                      stars={lessonStars[conversationKey(conv.id)] ?? 0}
+                      toGo={lessonsUntilUnlock(conv, lessonProgress)}
+                      onPress={() => {
+                        if (cs === 'premium-locked') setPremiumVisible(true);
+                        else if (cs !== 'locked') router.push(`/conversation?id=${conv.id}`);
+                      }}
+                    />
+                  );
+                })}
+              </React.Fragment>
+            );
           }
           const { lesson, world, zigIdx } = item;
           const state = getEffectiveState(lesson, world, lessonProgress, isPremium);
@@ -471,6 +544,30 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.hud,
     letterSpacing: 0.5,
   },
+
+  convCard: {
+    marginHorizontal: 16, marginBottom: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 10, paddingHorizontal: 12,
+    borderRadius: 14, borderWidth: 2, borderColor: Colors.borderStrong,
+    backgroundColor: Colors.card,
+  },
+  convCardLocked: { borderColor: Colors.border, backgroundColor: Colors.bgInset },
+  convIcon: {
+    width: 44, height: 44, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.bg, borderWidth: 2, borderColor: Colors.borderStrong,
+  },
+  convBody: { flex: 1, gap: 1 },
+  convKicker: { color: Colors.textDim, fontSize: 8, fontFamily: Fonts.hud, letterSpacing: 1.5 },
+  convTitle: { color: Colors.text, fontSize: 15, fontFamily: Fonts.body, fontWeight: '700' },
+  convSub: { color: Colors.textDim, fontSize: 12, fontFamily: Fonts.body },
+  convStart: {
+    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4,
+    backgroundColor: Colors.borderStrong,
+  },
+  convCheck: { color: Colors.text, fontSize: 20, fontWeight: '800' },
+  convLock: { fontSize: 14, opacity: 0.6 },
 
   nodeRow: { position: 'relative', width: '100%' },
   connLine: {

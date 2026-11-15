@@ -22,4 +22,7 @@ export const StorageKeys = {
   // Deliberately NOT part of the cloud progress snapshot: unlocking is a
   // per-device switch, not progress to be synced.
   unlockedPacks:  '@thaiapp_unlocked_packs',
+  // prefsStore — whether the learner speaks as a man or a woman (decides
+  // ครับ/ค่ะ and ผม/ฉัน in conversation lines). A per-device preference.
+  speakerGender:  '@thaiapp_speaker_gender',
 } as const;
