@@ -34,13 +34,38 @@ money is **content quality + distribution**, in this order.
   the sitemap/robots and no longer linked from the paywall or profile footer
   — still reachable via Terms → Refund Policy.
 
-## 🧾 Audit follow-ups (see docs/AUDIT.md → Resolution status)
+## 🚦 Go-live checklist (15 November 2026)
 
-Code fixes are deployed. Still needed from you: re-run `analytics.sql` and
-`entitlements.sql`; redeploy `stripe-webhook`; add the
-`checkout.session.async_payment_succeeded` event to the Stripe endpoint; set a
-Sentry DSN; decide whether to grandfather early testers before flipping
-`PREMIUM_ON_HOLD`.
+The app is code-complete for a paid web launch. The paid configuration
+(`PREMIUM_ON_HOLD = false`) was built and tested end to end in a browser:
+hearts in lessons and conversations, out-of-hearts, premium locks on lessons
+and conversation cards, the paywall with all three Stripe links, refused deep
+links into premium content, and a clean cold load of every route.
+
+Do these in order. 1–4 must be done **before** the flip, or paying customers
+can end up without Premium.
+
+1. **Supabase → SQL Editor:** run `supabase/analytics.sql` and
+   `supabase/entitlements.sql` (both safe to re-run).
+2. **Redeploy the webhook:** `supabase functions deploy stripe-webhook --no-verify-jwt`.
+3. **Stripe → Developers → Webhooks:** add the event
+   `checkout.session.async_payment_succeeded` to the endpoint.
+4. **Real email (Step 3b below):** verify a domain in Resend. Until then
+   "Link Email" only works for your own address, so buyers cannot restore
+   Premium on a second device.
+5. **Buy one plan yourself** with a real card on the live site and confirm
+   Premium switches on within a minute; refund it from the Stripe dashboard.
+6. **Flip the switch:** set `PREMIUM_ON_HOLD = false` in `constants/features.ts`,
+   then `npm run deploy:web`. Testers keep every lesson they completed; premium
+   lessons they reached but did not finish lock again.
+
+Strongly recommended, not blocking:
+- **Sentry DSN** (`EXPO_PUBLIC_SENTRY_DSN` at build time) — otherwise you
+  launch blind to crashes.
+- **Native-speaker review** (Step 2) of vocabulary, phrasebook and
+  conversations — all Thai is machine-authored.
+- **Sentence audio** (Step 1 re-run with a new TTS key) — phrases and
+  conversations use the device voice until then. Rotate the old key.
 
 ## 🔑 Step 1 — Native-quality audio (highest leverage, ~1 hour of your time)
 

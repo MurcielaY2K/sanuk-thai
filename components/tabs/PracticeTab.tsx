@@ -5,6 +5,7 @@ import {
 import { router } from 'expo-router';
 import { useSrsStore } from '../../store/srsStore';
 import { ALL_CHARS } from '../../data/alphabet';
+import { PHRASE_CATEGORIES } from '../../data/phrases';
 import { Colors } from '../../constants/colors';
 import { Fonts } from '../../constants/typography';
 
@@ -56,7 +57,7 @@ export default function PracticeTab() {
             color={Colors.mint}
             icon="📜"
             title="Read & Phrases"
-            sub="Illustrated stories · 16 phrase categories"
+            sub={`Illustrated stories · ${PHRASE_CATEGORIES.length} phrase categories`}
             onPress={() => router.push('/read')}
           />
         </View>

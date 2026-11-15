@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform,
   Animated, Easing,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, Redirect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useSrsStore } from '../store/srsStore';
 import { VOCABULARY } from '../data/vocabulary';
@@ -54,10 +54,6 @@ export default function SessionScreen() {
   };
 
   useEffect(() => {
-    if (currentSession.length === 0) router.replace('/');
-  }, []);
-
-  useEffect(() => {
     const w = currentSession[index];
     if (w) {
       setOptions(makeOptions(w.en));
@@ -69,7 +65,10 @@ export default function SessionScreen() {
     }
   }, [index]);
 
-  if (currentSession.length === 0) return null;
+  // No session in memory (page reloaded mid-session, or opened by direct
+  // link): go home. Done declaratively — an imperative router.replace() here
+  // runs before the root layout has mounted on a cold load and crashes the app.
+  if (currentSession.length === 0) return <Redirect href="/" />;
 
   const word = currentSession[index];
 
